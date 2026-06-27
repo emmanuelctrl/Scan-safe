@@ -1,0 +1,39 @@
+# Render Blueprint for the Inventory Tracker backend.
+#
+# Deploy: Render Dashboard -> New -> Blueprint -> pick this repo.
+# After the first deploy, fill in the values marked `sync: false` in the
+# Render dashboard (they are intentionally not stored in git).
+#
+# Data is stored in a free, durable Turso database (see README), so NO
+# persistent disk is needed and this runs fine on the free plan.
+services:
+  - type: web
+    name: scan-safe-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true # Render generates a strong random secret.
+      - key: CLIENT_ORIGIN
+        sync: false # Set to your Vercel/front-end origin (no trailing slash).
+      - key: TURSO_DATABASE_URL
+        sync: false # libsql://... from `turso db show <db> --url`
+      - key: TURSO_AUTH_TOKEN
+        sync: false # from `turso db tokens create <db>`
+      # Optional SMTP for owner notifications (left unset -> logged to console):
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false

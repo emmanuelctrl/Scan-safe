@@ -1,0 +1,18 @@
+{
+  "name": "inventory-tracker",
+  "version": "1.0.0",
+  "description": "Inventory management & theft prevention website for boutique stores (React + Node/Express).",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "seed": "npm run seed --prefix server",
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
