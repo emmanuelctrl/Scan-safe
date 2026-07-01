@@ -51,3 +51,7 @@ export const changePinSchema = z.object({
 export const notificationEmailSchema = z.object({ email });
 
 export const themeSchema = z.object({ theme: z.enum(['light', 'dark']) });
+
+export const adminLoginSchema = z.object({
+  password: z.string().min(1, 'Password is required.'),
+});

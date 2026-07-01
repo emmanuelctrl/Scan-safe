@@ -125,6 +125,12 @@ export default function LoginPage() {
             {mode === 'login' ? 'Create one' : 'Sign in'}
           </button>
         </p>
+
+        <p className="auth__switch muted">
+          <button className="link" type="button" onClick={() => navigate('/admin/login')}>
+            🛡️ Admin login
+          </button>
+        </p>
       </div>
     </div>
   );

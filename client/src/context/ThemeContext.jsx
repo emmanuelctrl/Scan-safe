@@ -1,6 +1,7 @@
 // Theme context: light/dark mode. The choice is persisted to localStorage and,
 // when changed by the owner, synced to the backend so it follows the store.
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { syncTelegramThemeColors } from '../lib/telegram.js';
 
 const ThemeContext = createContext(null);
 
@@ -13,6 +14,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('it_theme', theme);
+    syncTelegramThemeColors(theme);
   }, [theme]);
 
   const setTheme = useCallback((t) => setThemeState(t), []);

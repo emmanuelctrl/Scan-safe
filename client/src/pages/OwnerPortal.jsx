@@ -1,12 +1,14 @@
 // Owner Portal: PIN-gated area with Dashboard, Inventory and Settings tabs.
 // Each account sees only its own data.
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar.jsx';
 import PinGate from '../components/owner/PinGate.jsx';
 import DashboardTab from '../components/owner/DashboardTab.jsx';
 import InventoryTab from '../components/owner/InventoryTab.jsx';
 import SettingsTab from '../components/owner/SettingsTab.jsx';
 import { tokenStore } from '../api/client.js';
+import { useTelegramBackButton } from '../lib/telegram.js';
 
 const TABS = [
   { id: 'dashboard', label: '📊 Dashboard' },
@@ -15,12 +17,17 @@ const TABS = [
 ];
 
 export default function OwnerPortal() {
+  const navigate = useNavigate();
   // Consider the portal unlocked if an owner token already exists this session.
   const [unlocked, setUnlocked] = useState(() => !!tokenStore.getOwner());
   const [tab, setTab] = useState('dashboard');
   // Bumping this forces dashboard/inventory to refetch after mutations.
   const [refreshKey, setRefreshKey] = useState(0);
   const bumpRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  // Inside Telegram there's no browser chrome, so surface the native
+  // BackButton to return to the Worker portal.
+  useTelegramBackButton(true, useCallback(() => navigate('/worker'), [navigate]));
 
   function lock() {
     tokenStore.clearOwner();
