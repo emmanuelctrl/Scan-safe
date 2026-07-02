@@ -30,6 +30,9 @@ separate inventory and dashboard** — and inventory can be built in seconds by
 - **Per-account isolation (multi-tenant)** — accounts never see each other's data.
 - **Settings** — change the PIN, change the notification email, toggle
   **dark / light theme**.
+- **Bilingual UI — English / Amharic (አማርኛ)** — switch instantly with the
+  **አማ / EN** button in the top bar (or Owner Portal → Settings → Language);
+  the choice is remembered on the device.
 - **Production-ready backend** — Helmet, CORS allow-listing, rate limiting,
   bcrypt-hashed passwords & PINs, JWT auth, Zod validation, parameterized SQL,
   centralized error handling, graceful shutdown.
@@ -76,7 +79,8 @@ Scan-safe/
     └── src/
         ├── main.jsx, App.jsx
         ├── api/client.js   # fetch wrapper + file upload
-        ├── context/        # Auth + Theme providers
+        ├── context/        # Auth + Theme + Language providers
+        ├── i18n/           # English + Amharic UI translations
         ├── lib/telegram.js # Telegram Mini App integration (no-op outside Telegram)
         ├── components/      # Navbar, BarcodeScanner, owner/* tabs
         ├── pages/          # LoginPage, WorkerPortal, OwnerPortal, Admin*

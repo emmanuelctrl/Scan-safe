@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLang } from '../context/LanguageContext.jsx';
 
 export default function LoginPage() {
   const { login, register, loading } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { lang, toggleLang, t } = useLang();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState('login'); // 'login' | 'register'
@@ -38,9 +40,16 @@ export default function LoginPage() {
   return (
     <div className="auth">
       <button
+        className="icon-btn icon-btn--lang auth__lang"
+        onClick={toggleLang}
+        title={t('changeLanguage')}
+      >
+        {lang === 'en' ? 'አማ' : 'EN'}
+      </button>
+      <button
         className="icon-btn auth__theme"
         onClick={toggleTheme}
-        title="Toggle theme"
+        title={t('toggleTheme')}
       >
         {theme === 'light' ? '🌙' : '☀️'}
       </button>
@@ -48,8 +57,8 @@ export default function LoginPage() {
       <div className="auth__card card">
         <div className="auth__brand">
           <span className="auth__logo">🛍️</span>
-          <h1>Inventory Tracker</h1>
-          <p className="muted">Inventory management &amp; theft prevention for boutiques</p>
+          <h1>{t('appName')}</h1>
+          <p className="muted">{t('loginTagline')}</p>
         </div>
 
         <div className="auth__tabs">
@@ -58,21 +67,21 @@ export default function LoginPage() {
             onClick={() => { setMode('login'); setError(null); }}
             type="button"
           >
-            Sign in
+            {t('signIn')}
           </button>
           <button
             className={`auth__tab ${mode === 'register' ? 'is-active' : ''}`}
             onClick={() => { setMode('register'); setError(null); }}
             type="button"
           >
-            Create account
+            {t('createAccount')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="form">
           {mode === 'register' && (
             <label className="field">
-              <span>Name <span className="muted">(optional)</span></span>
+              <span>{t('nameLabel')} <span className="muted">({t('optional')})</span></span>
               <input
                 type="text"
                 value={form.name}
@@ -84,7 +93,7 @@ export default function LoginPage() {
           )}
 
           <label className="field">
-            <span>Email</span>
+            <span>{t('emailLabel')}</span>
             <input
               type="email"
               required
@@ -96,14 +105,14 @@ export default function LoginPage() {
           </label>
 
           <label className="field">
-            <span>Password</span>
+            <span>{t('passwordLabel')}</span>
             <input
               type="password"
               required
               minLength={mode === 'register' ? 8 : undefined}
               value={form.password}
               onChange={update('password')}
-              placeholder={mode === 'register' ? 'At least 8 characters' : '••••••••'}
+              placeholder={mode === 'register' ? t('passwordMinPlaceholder') : '••••••••'}
               autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
             />
           </label>
@@ -111,24 +120,24 @@ export default function LoginPage() {
           {error && <p className="form__error">{error}</p>}
 
           <button className="btn btn--primary btn--block" disabled={loading}>
-            {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+            {loading ? t('pleaseWait') : mode === 'login' ? t('signIn') : t('createAccount')}
           </button>
         </form>
 
         <p className="auth__switch muted">
-          {mode === 'login' ? "Don't have an account? " : 'Already registered? '}
+          {mode === 'login' ? t('noAccount') : t('alreadyRegistered')}
           <button
             className="link"
             type="button"
             onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }}
           >
-            {mode === 'login' ? 'Create one' : 'Sign in'}
+            {mode === 'login' ? t('createOne') : t('signIn')}
           </button>
         </p>
 
         <p className="auth__switch muted">
           <button className="link" type="button" onClick={() => navigate('/admin/login')}>
-            🛡️ Admin login
+            🛡️ {t('adminLogin')}
           </button>
         </p>
       </div>

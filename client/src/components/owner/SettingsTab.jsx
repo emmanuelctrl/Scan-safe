@@ -1,11 +1,14 @@
-// Owner settings: change the 6-digit PIN, change the notification email, and
-// toggle light/dark theme (persisted to the account on the server).
+// Owner settings: change the 6-digit PIN, change the notification email,
+// toggle light/dark theme (persisted to the account on the server), and
+// switch the UI language (English / Amharic, stored locally).
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import { useTheme } from '../../context/ThemeContext.jsx';
+import { useLang } from '../../context/LanguageContext.jsx';
 
 export default function SettingsTab() {
   const { theme, setTheme } = useTheme();
+  const { lang, setLang, t } = useLang();
   const [settings, setSettings] = useState(null);
 
   const [pinForm, setPinForm] = useState({ currentPin: '', newPin: '', confirmPin: '' });
@@ -29,7 +32,7 @@ export default function SettingsTab() {
     e.preventDefault();
     setPinMsg(null);
     if (pinForm.newPin !== pinForm.confirmPin) {
-      setPinMsg({ type: 'error', message: 'New PIN and confirmation do not match.' });
+      setPinMsg({ type: 'error', message: t('pinMismatch') });
       return;
     }
     try {
@@ -38,7 +41,7 @@ export default function SettingsTab() {
         owner: true,
         body: { currentPin: pinForm.currentPin, newPin: pinForm.newPin },
       });
-      setPinMsg({ type: 'success', message: 'PIN updated successfully.' });
+      setPinMsg({ type: 'success', message: t('pinUpdated') });
       setPinForm({ currentPin: '', newPin: '', confirmPin: '' });
     } catch (err) {
       setPinMsg({ type: 'error', message: err.message });
@@ -55,7 +58,7 @@ export default function SettingsTab() {
         body: { email: emailForm.email },
       });
       setSettings(d.settings);
-      setEmailMsg({ type: 'success', message: 'Notification email updated.' });
+      setEmailMsg({ type: 'success', message: t('emailUpdated') });
     } catch (err) {
       setEmailMsg({ type: 'error', message: err.message });
     }
@@ -81,71 +84,91 @@ export default function SettingsTab() {
       <div className="grid grid--2">
         {/* Change PIN */}
         <section className="card">
-          <div className="card__head"><h3>🔑 Change owner PIN</h3></div>
+          <div className="card__head"><h3>🔑 {t('changePin')}</h3></div>
           <form onSubmit={changePin} className="form">
             <label className="field">
-              <span>Current PIN</span>
+              <span>{t('currentPin')}</span>
               <input inputMode="numeric" maxLength={6} value={pinForm.currentPin}
                 onChange={(e) => setPinForm({ ...pinForm, currentPin: onlyDigits(e.target.value) })}
                 placeholder="••••••" />
             </label>
             <label className="field">
-              <span>New PIN</span>
+              <span>{t('newPin')}</span>
               <input inputMode="numeric" maxLength={6} value={pinForm.newPin}
                 onChange={(e) => setPinForm({ ...pinForm, newPin: onlyDigits(e.target.value) })}
-                placeholder="6 digits" />
+                placeholder={t('sixDigits')} />
             </label>
             <label className="field">
-              <span>Confirm new PIN</span>
+              <span>{t('confirmPin')}</span>
               <input inputMode="numeric" maxLength={6} value={pinForm.confirmPin}
                 onChange={(e) => setPinForm({ ...pinForm, confirmPin: onlyDigits(e.target.value) })}
-                placeholder="6 digits" />
+                placeholder={t('sixDigits')} />
             </label>
             {pinMsg && <p className={`status status--${pinMsg.type}`}>{pinMsg.message}</p>}
-            <button className="btn btn--primary">Update PIN</button>
+            <button className="btn btn--primary">{t('updatePin')}</button>
           </form>
         </section>
 
         {/* Notification email */}
         <section className="card">
-          <div className="card__head"><h3>✉️ Notification email</h3></div>
-          <p className="muted">Scan/checkout alerts are sent to this address.</p>
+          <div className="card__head"><h3>✉️ {t('notifEmail')}</h3></div>
+          <p className="muted">{t('notifEmailDesc')}</p>
           <form onSubmit={changeEmail} className="form">
             <label className="field">
-              <span>Email address</span>
+              <span>{t('emailAddress')}</span>
               <input type="email" required value={emailForm.email}
                 onChange={(e) => setEmailForm({ email: e.target.value })}
                 placeholder="owner@store.com" />
             </label>
             {emailMsg && <p className={`status status--${emailMsg.type}`}>{emailMsg.message}</p>}
-            <button className="btn btn--primary">Save email</button>
+            <button className="btn btn--primary">{t('saveEmail')}</button>
           </form>
         </section>
       </div>
 
       {/* Theme */}
       <section className="card">
-        <div className="card__head"><h3>🎨 Appearance</h3></div>
-        <p className="muted">Choose your portal theme.</p>
+        <div className="card__head"><h3>🎨 {t('appearance')}</h3></div>
+        <p className="muted">{t('chooseTheme')}</p>
         <div className="theme-toggle">
           <button
             className={`theme-option ${theme === 'light' ? 'is-active' : ''}`}
             onClick={() => applyTheme('light')}
           >
-            ☀️ Light
+            ☀️ {t('light')}
           </button>
           <button
             className={`theme-option ${theme === 'dark' ? 'is-active' : ''}`}
             onClick={() => applyTheme('dark')}
           >
-            🌙 Dark
+            🌙 {t('dark')}
+          </button>
+        </div>
+      </section>
+
+      {/* Language */}
+      <section className="card">
+        <div className="card__head"><h3>🌐 {t('language')}</h3></div>
+        <p className="muted">{t('chooseLanguage')}</p>
+        <div className="theme-toggle">
+          <button
+            className={`theme-option ${lang === 'en' ? 'is-active' : ''}`}
+            onClick={() => setLang('en')}
+          >
+            English
+          </button>
+          <button
+            className={`theme-option ${lang === 'am' ? 'is-active' : ''}`}
+            onClick={() => setLang('am')}
+          >
+            አማርኛ
           </button>
         </div>
       </section>
 
       {settings && (
         <p className="muted settings__meta">
-          Last updated: {new Date(settings.updated_at + 'Z').toLocaleString()}
+          {t('lastUpdated', { date: new Date(settings.updated_at + 'Z').toLocaleString() })}
         </p>
       )}
     </div>

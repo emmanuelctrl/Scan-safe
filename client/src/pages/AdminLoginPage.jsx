@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, tokenStore } from '../api/client.js';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLang } from '../context/LanguageContext.jsx';
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { lang, toggleLang, t } = useLang();
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -34,9 +36,16 @@ export default function AdminLoginPage() {
   return (
     <div className="auth">
       <button
+        className="icon-btn icon-btn--lang auth__lang"
+        onClick={toggleLang}
+        title={t('changeLanguage')}
+      >
+        {lang === 'en' ? 'አማ' : 'EN'}
+      </button>
+      <button
         className="icon-btn auth__theme"
         onClick={toggleTheme}
-        title="Toggle theme"
+        title={t('toggleTheme')}
       >
         {theme === 'light' ? '🌙' : '☀️'}
       </button>
@@ -44,13 +53,13 @@ export default function AdminLoginPage() {
       <div className="auth__card card">
         <div className="auth__brand">
           <span className="auth__logo">🛡️</span>
-          <h1>Super Admin</h1>
-          <p className="muted">Enter the admin password to view all stores.</p>
+          <h1>{t('superAdmin')}</h1>
+          <p className="muted">{t('adminPrompt')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="form">
           <label className="field">
-            <span>Admin password</span>
+            <span>{t('adminPassword')}</span>
             <input
               type="password"
               required
@@ -65,7 +74,7 @@ export default function AdminLoginPage() {
           {error && <p className="form__error">{error}</p>}
 
           <button className="btn btn--primary btn--block" disabled={busy || !password}>
-            {busy ? 'Checking…' : 'Enter admin panel'}
+            {busy ? t('checking') : t('enterAdmin')}
           </button>
         </form>
       </div>
