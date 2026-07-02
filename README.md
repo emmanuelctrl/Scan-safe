@@ -60,21 +60,23 @@ Scan-safe/
 │       ├── index.js        # Entry point (+ graceful shutdown)
 │       ├── app.js          # Express app, security middleware, routes
 │       ├── config/         # env + database (schema bootstrap)
-│       ├── models/         # Data access (users, items, scans, settings)
-│       ├── routes/         # auth, scan, owner
-│       ├── middleware/     # auth, owner-PIN, upload, error handler
+│       ├── models/         # Data access (users, items, scans, settings, admin)
+│       ├── routes/         # auth, scan, owner, admin
+│       ├── middleware/     # auth, owner-PIN, admin-auth, upload, error handler
 │       ├── services/       # email + spreadsheet import
 │       ├── validators/     # Zod schemas
 │       ├── utils/          # ApiError, asyncHandler, validate
 │       └── scripts/seed.js # Optional demo data
 └── client/                 # React app
     ├── .env.example
+    ├── index.html          # Loads the Telegram Web App SDK
     └── src/
         ├── main.jsx, App.jsx
         ├── api/client.js   # fetch wrapper + file upload
         ├── context/        # Auth + Theme providers
+        ├── lib/telegram.js # Telegram Mini App integration (no-op outside Telegram)
         ├── components/      # Navbar, BarcodeScanner, owner/* tabs
-        ├── pages/          # LoginPage, WorkerPortal, OwnerPortal
+        ├── pages/          # LoginPage, WorkerPortal, OwnerPortal, Admin*
         └── styles/index.css
 ```
 
@@ -134,6 +136,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `JWT_SECRET` | ✅ | Long random string used to sign login tokens. |
 | `JWT_EXPIRES_IN` | – | Session lifetime (default `7d`). |
 | `DEFAULT_OWNER_PIN` | – | PIN assigned to each new account (default `123456`). |
+| `ADMIN_PASSWORD` | – | Password for the app-wide Super Admin panel at `/admin` (default `0703`). Change this before deploying publicly. |
 | `DATABASE_PATH` | – | Local SQLite file path used in dev when no Turso URL is set (default `./data/inventory.sqlite`). |
 | `TURSO_DATABASE_URL` | ✅ (prod) | Hosted libSQL/Turso URL (`libsql://...`). Required in production for durable storage. |
 | `TURSO_AUTH_TOKEN` | ✅ (prod) | Auth token for the Turso database. |
@@ -195,7 +198,57 @@ obtained by verifying the PIN at `POST /api/owner/unlock`.
 | `PUT` | `/api/owner/settings/pin` | owner | Change PIN |
 | `PUT` | `/api/owner/settings/notification-email` | owner | Change email |
 | `PUT` | `/api/owner/settings/theme` | owner | Save theme |
+| `POST` | `/api/admin/login` | – | Verify admin password → admin token |
+| `GET` | `/api/admin/overview` | admin | App-wide totals (all stores) |
+| `GET` | `/api/admin/stores` | admin | Every registered store + snapshot |
 | `GET` | `/api/health` | – | Health check |
+
+---
+
+## 🛡️ Super Admin panel
+
+A separate, app-wide admin area at **`/admin/login`** (linked from the bottom
+of the sign-in page) lets the operator see every registered store at a
+glance — total items, inventory value, and today's sales per store. It is
+completely independent of any individual store's account login or Owner PIN.
+
+- Default password: **`0703`**. Override it with the `ADMIN_PASSWORD`
+  environment variable (strongly recommended before deploying publicly).
+- Protected by its own short-lived token (`x-admin-token` header, 2h expiry)
+  issued by `POST /api/admin/login`, and by the same rate limiter as the auth
+  endpoints to slow down brute-force attempts against the password.
+- Read-only: it reports on stores but does not expose password hashes or let
+  you edit another store's data.
+
+---
+
+## 📱 Telegram Mini App
+
+The app can run inside Telegram as a **Mini App**, in addition to working as
+a normal website. It automatically detects when it's opened inside Telegram
+(via the [Telegram Web App SDK](https://core.telegram.org/bots/webapps),
+loaded in `client/index.html`) and adapts:
+
+- Expands to full height and follows Telegram's safe viewport size.
+- Syncs the header/background chrome color with the app's light/dark theme.
+- Shows Telegram's native **Back Button** instead of relying on browser
+  navigation (e.g. from the Owner Portal back to the Worker Portal).
+
+Outside Telegram none of this activates — the site behaves exactly as before.
+
+**To register it as a Mini App:**
+
+1. Deploy the frontend somewhere with **HTTPS** (required by Telegram).
+2. Message [@BotFather](https://t.me/BotFather) → create a bot (or use an
+   existing one) with `/newbot`.
+3. Run `/newapp` (or **Bot Settings → Menu Button** for a simpler setup) and
+   set the Web App URL to your deployed HTTPS frontend URL.
+4. Open your bot in Telegram and tap the menu button / launch the Mini App —
+   the same login (email/password) and Owner PIN work as on the web.
+
+Login/session storage still uses the browser's `localStorage`/
+`sessionStorage` inside Telegram's WebView, so accounts and sessions behave
+the same as in a normal browser tab.
 
 ---
 

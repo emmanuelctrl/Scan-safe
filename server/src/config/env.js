@@ -38,6 +38,10 @@ const config = {
 
   defaultOwnerPin: process.env.DEFAULT_OWNER_PIN || '123456',
 
+  // Password for the app-wide Super Admin panel (/admin), separate from any
+  // one store's Owner PIN. Override with ADMIN_PASSWORD in production.
+  adminPassword: process.env.ADMIN_PASSWORD || '0703',
+
   // Local file path used when no remote (Turso) database is configured.
   databasePath: path.isAbsolute(process.env.DATABASE_PATH || '')
     ? process.env.DATABASE_PATH
@@ -69,6 +73,15 @@ const config = {
 // Warn loudly if the JWT secret is left at its insecure default in production.
 if (config.isProduction && config.jwtSecret === 'dev_insecure_secret_change_me') {
   throw new Error('JWT_SECRET must be set to a strong secret in production.');
+}
+
+// The admin password has a well-known default; that's fine for local/dev use
+// but worth flagging loudly if it slips into production unchanged.
+if (config.isProduction && config.adminPassword === '0703') {
+  console.warn(
+    '[config] WARNING: ADMIN_PASSWORD is unset and using the default value. ' +
+      'Set ADMIN_PASSWORD to a strong secret before exposing this app publicly.'
+  );
 }
 
 // In production we must use a durable, hosted database — never a local file,

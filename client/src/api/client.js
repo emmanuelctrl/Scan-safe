@@ -6,6 +6,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 // Keys for browser storage.
 const TOKEN_KEY = 'it_token';
 const OWNER_TOKEN_KEY = 'it_owner_token';
+const ADMIN_TOKEN_KEY = 'it_admin_token';
 
 export const tokenStore = {
   get: () => localStorage.getItem(TOKEN_KEY),
@@ -14,6 +15,9 @@ export const tokenStore = {
   getOwner: () => sessionStorage.getItem(OWNER_TOKEN_KEY),
   setOwner: (t) => sessionStorage.setItem(OWNER_TOKEN_KEY, t),
   clearOwner: () => sessionStorage.removeItem(OWNER_TOKEN_KEY),
+  getAdmin: () => sessionStorage.getItem(ADMIN_TOKEN_KEY),
+  setAdmin: (t) => sessionStorage.setItem(ADMIN_TOKEN_KEY, t),
+  clearAdmin: () => sessionStorage.removeItem(ADMIN_TOKEN_KEY),
 };
 
 /**
@@ -23,8 +27,9 @@ export const tokenStore = {
  * @param {string} [options.method]
  * @param {object} [options.body]    Auto-JSON-stringified.
  * @param {boolean} [options.owner]  Attach the owner token header.
+ * @param {boolean} [options.admin]  Attach the admin token header.
  */
-export async function api(path, { method = 'GET', body, owner = false } = {}) {
+export async function api(path, { method = 'GET', body, owner = false, admin = false } = {}) {
   const headers = { 'Content-Type': 'application/json' };
 
   const token = tokenStore.get();
@@ -33,6 +38,11 @@ export async function api(path, { method = 'GET', body, owner = false } = {}) {
   if (owner) {
     const ownerToken = tokenStore.getOwner();
     if (ownerToken) headers['x-owner-token'] = ownerToken;
+  }
+
+  if (admin) {
+    const adminToken = tokenStore.getAdmin();
+    if (adminToken) headers['x-admin-token'] = adminToken;
   }
 
   let res;

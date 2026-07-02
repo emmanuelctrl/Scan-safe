@@ -4,7 +4,11 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
+import { initTelegramWebApp } from './lib/telegram.js';
 import './styles/index.css';
+
+// No-op outside Telegram; expands to full height & syncs viewport inside it.
+initTelegramWebApp();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
