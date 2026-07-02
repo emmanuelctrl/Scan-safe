@@ -309,6 +309,28 @@ input:focus { outline: 2px solid var(--primary); outline-offset: 1px; border-col
 }
 .list__row:last-child { border-bottom: none; }
 
+/* ── Stock stepper (+/- controls in the inventory table) ──────── */
+.stepper { display: inline-flex; align-items: center; gap: 0.3rem; }
+.stepper__btn {
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 700; line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.stepper__btn:hover:not(:disabled) { background: var(--border); }
+.stepper__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.stepper__value { min-width: 1.6em; text-align: center; font-weight: 600; }
+.stepper__amount {
+  width: 44px !important;
+  padding: 0.25rem 0.3rem !important;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 .table-wrap { overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .table th, .table td {

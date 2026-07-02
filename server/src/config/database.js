@@ -131,6 +131,18 @@ const SCHEMA_SQL = `
   );
 
   CREATE INDEX IF NOT EXISTS idx_scans_user_created ON scans (user_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS stock_movements (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id         INTEGER REFERENCES items(id) ON DELETE SET NULL,
+    barcode         TEXT NOT NULL,
+    item_name       TEXT NOT NULL,
+    quantity_change INTEGER NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_stock_movements_user_created ON stock_movements (user_id, created_at);
 `;
 
 /**

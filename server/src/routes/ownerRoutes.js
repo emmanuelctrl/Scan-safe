@@ -11,6 +11,7 @@
 import { Router } from 'express';
 import { ItemModel } from '../models/itemModel.js';
 import { ScanModel } from '../models/scanModel.js';
+import { StockModel } from '../models/stockModel.js';
 import { SettingsModel } from '../models/settingsModel.js';
 import { parseInventoryFile } from '../services/importService.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -23,6 +24,7 @@ import {
   changePinSchema,
   notificationEmailSchema,
   themeSchema,
+  stockAdjustSchema,
 } from '../validators/schemas.js';
 import { validate } from '../utils/validate.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -53,10 +55,11 @@ router.get(
   '/dashboard',
   asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const [stats, sales, recent] = await Promise.all([
+    const [stats, sales, recent, stockIn] = await Promise.all([
       ItemModel.stats(userId),
       ScanModel.salesToday(userId),
       ScanModel.recent(userId, 15),
+      StockModel.stockInToday(userId),
     ]);
     res.json({
       inventory: {
@@ -71,6 +74,11 @@ router.get(
         units: sales.units,
         revenue: sales.revenue,
         items: sales.rows,
+      },
+      stockToday: {
+        count: stockIn.count,
+        units: stockIn.units,
+        items: stockIn.rows,
       },
       recentActivity: recent,
     });
@@ -98,6 +106,21 @@ router.post(
     }
     const item = await ItemModel.create(userId, data);
     res.status(201).json({ item });
+  })
+);
+
+// POST /api/owner/items/:id/stock — adjust quantity by +/- N units (restock
+// or correction). Logs the change so it shows up in "today's stock added".
+router.post(
+  '/items/:id/stock',
+  asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const id = Number(req.params.id);
+    const { change } = validate(stockAdjustSchema, req.body);
+
+    const item = await StockModel.adjustStock(userId, id, change);
+    if (!item) throw ApiError.notFound('Item not found.');
+    res.json({ item });
   })
 );
 

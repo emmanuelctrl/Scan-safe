@@ -23,7 +23,7 @@ export default function DashboardTab({ refreshKey }) {
   if (error) return <p className="status status--error">{error}</p>;
   if (!data) return null;
 
-  const { inventory, salesToday } = data;
+  const { inventory, salesToday, stockToday } = data;
 
   return (
     <div className="dashboard">
@@ -31,6 +31,7 @@ export default function DashboardTab({ refreshKey }) {
       <div className="stats">
         <StatCard label="Sales today" value={salesToday.count} sub={money(salesToday.revenue)} accent="indigo" />
         <StatCard label="Units sold today" value={salesToday.units} accent="green" />
+        <StatCard label="Stock added today" value={stockToday?.units ?? 0} sub={`${stockToday?.count ?? 0} restock(s)`} accent="blue" />
         <StatCard label="Total items" value={inventory.totalItems} sub={`${inventory.totalUnits} units`} accent="blue" />
         <StatCard label="Inventory value" value={money(inventory.inventoryValue)} accent="amber" />
       </div>
@@ -97,6 +98,35 @@ export default function DashboardTab({ refreshKey }) {
                     <td>{s.quantity}</td>
                     <td>{money(s.unit_price)}</td>
                     <td className="muted">{new Date(s.created_at + 'Z').toLocaleTimeString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Today's stock added (restocks) detail */}
+      <section className="card">
+        <div className="card__head">
+          <h3>Today's stock added</h3>
+          <span className="muted">{stockToday?.units ?? 0} units · {stockToday?.count ?? 0} restock(s)</span>
+        </div>
+        {!stockToday?.items?.length ? (
+          <p className="muted">No stock added yet today.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr><th>Item</th><th>Barcode</th><th>Added</th><th>Time</th></tr>
+              </thead>
+              <tbody>
+                {stockToday.items.map((m) => (
+                  <tr key={m.id}>
+                    <td>{m.item_name}</td>
+                    <td className="muted">{m.barcode}</td>
+                    <td>+{m.quantity_change}</td>
+                    <td className="muted">{new Date(m.created_at + 'Z').toLocaleTimeString()}</td>
                   </tr>
                 ))}
               </tbody>

@@ -15,6 +15,9 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
   const [editingId, setEditingId] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [notice, setNotice] = useState(null);
+  // How many units the +/- stepper adjusts by, per row (defaults to 1).
+  const [stepAmount, setStepAmount] = useState({});
+  const [adjustingId, setAdjustingId] = useState(null);
 
   function load() {
     setLoading(true);
@@ -68,7 +71,6 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
           name: editRow.name.trim(),
           barcode: editRow.barcode.trim(),
           price: Number(editRow.price || 0),
-          quantity: Number(editRow.quantity || 0),
           low_stock_at: Number(editRow.low_stock_at || 0),
           sku: editRow.sku?.trim() || undefined,
         },
@@ -79,6 +81,27 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
       bumpRefresh?.();
     } catch (err) {
       setNotice({ type: 'error', message: err.message });
+    }
+  }
+
+  // Adjust stock by +/- the row's step amount. Every adjustment is recorded
+  // on the backend so it shows up in the dashboard's "stock added today".
+  async function adjustStock(id, direction) {
+    const amount = Math.max(1, Number(stepAmount[id]) || 1);
+    setAdjustingId(id);
+    setNotice(null);
+    try {
+      const { item } = await api(`/api/owner/items/${id}/stock`, {
+        method: 'POST',
+        owner: true,
+        body: { change: amount * direction },
+      });
+      setItems((prev) => prev.map((i) => (i.id === id ? item : i)));
+      bumpRefresh?.();
+    } catch (err) {
+      setNotice({ type: 'error', message: err.message });
+    } finally {
+      setAdjustingId(null);
     }
   }
 
@@ -141,7 +164,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                       <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
                       <td><input value={editRow.barcode} onChange={(e) => setEditRow({ ...editRow, barcode: e.target.value })} /></td>
                       <td><input type="number" step="0.01" min="0" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: e.target.value })} /></td>
-                      <td><input type="number" min="0" value={editRow.quantity} onChange={(e) => setEditRow({ ...editRow, quantity: e.target.value })} /></td>
+                      <td className="muted" title="Use the +/- controls to change stock.">{editRow.quantity}</td>
                       <td><input type="number" min="0" value={editRow.low_stock_at} onChange={(e) => setEditRow({ ...editRow, low_stock_at: e.target.value })} /></td>
                       <td><input value={editRow.sku || ''} onChange={(e) => setEditRow({ ...editRow, sku: e.target.value })} /></td>
                       <td className="row-actions">
@@ -155,7 +178,37 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                       <td className="muted">{item.barcode}</td>
                       <td>{money(item.price)}</td>
                       <td>
-                        {item.quantity}
+                        <div className="stepper">
+                          <button
+                            type="button"
+                            className="stepper__btn"
+                            disabled={adjustingId === item.id || item.quantity === 0}
+                            onClick={() => adjustStock(item.id, -1)}
+                            title="Remove stock"
+                          >
+                            −
+                          </button>
+                          <span className="stepper__value">{item.quantity}</span>
+                          <button
+                            type="button"
+                            className="stepper__btn"
+                            disabled={adjustingId === item.id}
+                            onClick={() => adjustStock(item.id, 1)}
+                            title="Add stock"
+                          >
+                            +
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            className="stepper__amount"
+                            value={stepAmount[item.id] ?? 1}
+                            onChange={(e) =>
+                              setStepAmount((s) => ({ ...s, [item.id]: e.target.value }))
+                            }
+                            title="Amount to add/remove per click"
+                          />
+                        </div>
                         {item.quantity === 0 && <span className="badge badge--danger">OUT</span>}
                         {item.quantity > 0 && item.quantity <= item.low_stock_at && (
                           <span className="badge badge--warning">LOW</span>

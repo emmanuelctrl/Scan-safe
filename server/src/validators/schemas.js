@@ -55,3 +55,10 @@ export const themeSchema = z.object({ theme: z.enum(['light', 'dark']) });
 export const adminLoginSchema = z.object({
   password: z.string().min(1, 'Password is required.'),
 });
+
+export const stockAdjustSchema = z.object({
+  change: z.coerce
+    .number()
+    .int('Change must be a whole number.')
+    .refine((v) => v !== 0, 'Change cannot be zero.'),
+});
