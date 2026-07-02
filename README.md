@@ -22,6 +22,9 @@ separate inventory and dashboard** — and inventory can be built in seconds by
   - Today's sales (count, units, revenue)
   - Total inventory value
 - **Add / edit / delete items** and prices.
+- **Quick +/- stock adjustment** with a stepper (set the amount, tap +/- to
+  restock or correct) — every change is logged, and the dashboard shows
+  today's stock added alongside today's sales.
 - **📥 Excel / CSV import** — upload a spreadsheet and it instantly becomes your
   inventory (merge by barcode, or replace everything).
 - **Per-account isolation (multi-tenant)** — accounts never see each other's data.
@@ -194,6 +197,7 @@ obtained by verifying the PIN at `POST /api/owner/unlock`.
 | `GET`/`POST` | `/api/owner/items` | owner | List / add items |
 | `POST` | `/api/owner/items/import` | owner | Upload spreadsheet |
 | `PATCH`/`DELETE` | `/api/owner/items/:id` | owner | Edit / delete item |
+| `POST` | `/api/owner/items/:id/stock` | owner | Adjust stock by +/- N units (logged) |
 | `GET` | `/api/owner/settings` | owner | Read settings |
 | `PUT` | `/api/owner/settings/pin` | owner | Change PIN |
 | `PUT` | `/api/owner/settings/notification-email` | owner | Change email |
@@ -241,10 +245,21 @@ Outside Telegram none of this activates — the site behaves exactly as before.
 1. Deploy the frontend somewhere with **HTTPS** (required by Telegram).
 2. Message [@BotFather](https://t.me/BotFather) → create a bot (or use an
    existing one) with `/newbot`.
-3. Run `/newapp` (or **Bot Settings → Menu Button** for a simpler setup) and
-   set the Web App URL to your deployed HTTPS frontend URL.
-4. Open your bot in Telegram and tap the menu button / launch the Mini App —
-   the same login (email/password) and Owner PIN work as on the web.
+3. Set the **Menu Button** as a Web App (this is what makes it open *inside*
+   Telegram instead of a separate browser tab):
+   `/mybots` → pick your bot → **Bot Settings → Menu Button → Configure menu
+   button** → paste your deployed HTTPS URL and give it a short label (e.g.
+   "Open Store").
+4. That's it — the button now sits right next to the message box at all
+   times. Tapping it opens the Mini App inline, with no extra "leave the
+   chat and come back" step, and it works the very first time someone opens
+   the chat (before they've even pressed Start).
+
+> ⚠️ If instead you set a regular **URL button** (via `/setmenu` link
+> buttons or an inline `url` button) it opens Telegram's in-app browser as a
+> separate screen — that's the "leaves the chat" behavior. Only a **Web App**
+> type button (Menu Button above, or `/newapp` for a direct `t.me/<bot>/<app>`
+> link) opens the Mini App natively inline.
 
 Login/session storage still uses the browser's `localStorage`/
 `sessionStorage` inside Telegram's WebView, so accounts and sessions behave
