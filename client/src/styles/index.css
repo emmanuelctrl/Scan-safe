@@ -237,6 +237,8 @@ input:focus { outline: 2px solid var(--primary); outline-offset: 1px; border-col
   padding: 1rem; position: relative;
 }
 .auth__theme { position: absolute; top: 1rem; right: 1rem; }
+.auth__lang { position: absolute; top: 1rem; right: 3.6rem; }
+.icon-btn--lang { font-size: 0.8rem; font-weight: 700; }
 .auth__card { width: 100%; max-width: 410px; margin: 0; }
 .auth__brand { text-align: center; margin-bottom: 1.25rem; }
 .auth__logo { font-size: 2.5rem; display: block; }

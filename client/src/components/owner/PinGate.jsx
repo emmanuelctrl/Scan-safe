@@ -2,8 +2,10 @@
 // owner token and notifies the parent to reveal the portal.
 import { useState } from 'react';
 import { api, tokenStore } from '../../api/client.js';
+import { useLang } from '../../context/LanguageContext.jsx';
 
 export default function PinGate({ onUnlocked }) {
+  const { t } = useLang();
   const [pin, setPin] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -31,8 +33,8 @@ export default function PinGate({ onUnlocked }) {
     <div className="pin">
       <div className="pin__card card">
         <span className="pin__icon">🔒</span>
-        <h2>Owner Portal</h2>
-        <p className="muted">Enter your 6-digit PIN to continue.</p>
+        <h2>{t('ownerPortal')}</h2>
+        <p className="muted">{t('pinPrompt')}</p>
 
         <form onSubmit={handleSubmit} className="pin__form">
           <input
@@ -51,10 +53,10 @@ export default function PinGate({ onUnlocked }) {
             className="btn btn--primary btn--block"
             disabled={busy || pin.length !== 6}
           >
-            {busy ? 'Checking…' : 'Unlock'}
+            {busy ? t('checking') : t('unlock')}
           </button>
         </form>
-        <p className="muted pin__hint">Default PIN is 123456 — change it in Settings.</p>
+        <p className="muted pin__hint">{t('pinHint')}</p>
       </div>
     </div>
   );

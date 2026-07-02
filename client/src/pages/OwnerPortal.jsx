@@ -9,14 +9,16 @@ import InventoryTab from '../components/owner/InventoryTab.jsx';
 import SettingsTab from '../components/owner/SettingsTab.jsx';
 import { tokenStore } from '../api/client.js';
 import { useTelegramBackButton } from '../lib/telegram.js';
+import { useLang } from '../context/LanguageContext.jsx';
 
 const TABS = [
-  { id: 'dashboard', label: '📊 Dashboard' },
-  { id: 'inventory', label: '📦 Inventory' },
-  { id: 'settings', label: '⚙️ Settings' },
+  { id: 'dashboard', icon: '📊', labelKey: 'tabDashboard' },
+  { id: 'inventory', icon: '📦', labelKey: 'tabInventory' },
+  { id: 'settings', icon: '⚙️', labelKey: 'tabSettings' },
 ];
 
 export default function OwnerPortal() {
+  const { t } = useLang();
   const navigate = useNavigate();
   // Consider the portal unlocked if an owner token already exists this session.
   const [unlocked, setUnlocked] = useState(() => !!tokenStore.getOwner());
@@ -51,20 +53,20 @@ export default function OwnerPortal() {
       <main className="container">
         <div className="page__head page__head--row">
           <div>
-            <h1>Owner Portal</h1>
-            <p className="muted">Your store's inventory, sales and settings.</p>
+            <h1>{t('ownerPortal')}</h1>
+            <p className="muted">{t('ownerIntro')}</p>
           </div>
-          <button className="btn btn--ghost" onClick={lock}>🔒 Lock portal</button>
+          <button className="btn btn--ghost" onClick={lock}>🔒 {t('lockPortal')}</button>
         </div>
 
         <div className="tabs">
-          {TABS.map((t) => (
+          {TABS.map(({ id, icon, labelKey }) => (
             <button
-              key={t.id}
-              className={`tab ${tab === t.id ? 'is-active' : ''}`}
-              onClick={() => setTab(t.id)}
+              key={id}
+              className={`tab ${tab === id ? 'is-active' : ''}`}
+              onClick={() => setTab(id)}
             >
-              {t.label}
+              {icon} {t(labelKey)}
             </button>
           ))}
         </div>

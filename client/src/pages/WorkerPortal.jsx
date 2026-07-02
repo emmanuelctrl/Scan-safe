@@ -4,8 +4,10 @@ import { useCallback, useState } from 'react';
 import Navbar from '../components/Navbar.jsx';
 import BarcodeScanner from '../components/BarcodeScanner.jsx';
 import { api } from '../api/client.js';
+import { useLang } from '../context/LanguageContext.jsx';
 
 export default function WorkerPortal() {
+  const { t } = useLang();
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [status, setStatus] = useState(null); // { type, message }
@@ -16,7 +18,7 @@ export default function WorkerPortal() {
   const processBarcode = useCallback(async (barcode, action = 'checkout') => {
     if (!barcode || busy) return;
     setBusy(true);
-    setStatus({ type: 'info', message: `Processing ${barcode}…` });
+    setStatus({ type: 'info', message: t('processing', { code: barcode }) });
     try {
       const data = await api('/api/scan', {
         method: 'POST',
@@ -39,7 +41,7 @@ export default function WorkerPortal() {
     } finally {
       setBusy(false);
     }
-  }, [busy]);
+  }, [busy, t]);
 
   const handleDetected = useCallback(
     (text) => { processBarcode(text); },
@@ -60,22 +62,19 @@ export default function WorkerPortal() {
       <Navbar />
       <main className="container">
         <div className="page__head">
-          <h1>Worker Portal</h1>
-          <p className="muted">
-            Scan an item's barcode or QR code to check it out. The owner is
-            notified automatically.
-          </p>
+          <h1>{t('workerPortal')}</h1>
+          <p className="muted">{t('workerIntro')}</p>
         </div>
 
         <div className="grid grid--2">
           <section className="card">
             <div className="card__head">
-              <h2>Scanner</h2>
+              <h2>{t('scanner')}</h2>
               <button
                 className={`btn ${scanning ? 'btn--danger' : 'btn--primary'}`}
                 onClick={() => setScanning((s) => !s)}
               >
-                {scanning ? 'Stop camera' : 'Start camera'}
+                {scanning ? t('stopCamera') : t('startCamera')}
               </button>
             </div>
 
@@ -84,7 +83,7 @@ export default function WorkerPortal() {
             ) : (
               <div className="scanner__placeholder">
                 <span className="scanner__placeholder-icon">📷</span>
-                <p className="muted">Press “Start camera” to begin scanning.</p>
+                <p className="muted">{t('pressStart')}</p>
               </div>
             )}
 
@@ -93,11 +92,11 @@ export default function WorkerPortal() {
                 type="text"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
-                placeholder="…or type a barcode manually"
-                aria-label="Enter barcode manually"
+                placeholder={t('manualPlaceholder')}
+                aria-label={t('manualAria')}
               />
               <button className="btn btn--secondary" disabled={busy}>
-                Check out
+                {t('checkOut')}
               </button>
             </form>
 
@@ -108,10 +107,10 @@ export default function WorkerPortal() {
 
           <section className="card">
             <div className="card__head">
-              <h2>Recent scans</h2>
+              <h2>{t('recentScans')}</h2>
             </div>
             {history.length === 0 ? (
-              <p className="muted">No scans yet this session.</p>
+              <p className="muted">{t('noScans')}</p>
             ) : (
               <ul className="feed">
                 {history.map((h) => (
@@ -121,9 +120,9 @@ export default function WorkerPortal() {
                       <span className="muted"> · {h.barcode}</span>
                     </div>
                     <div className="feed__meta">
-                      <span>{h.remaining} left</span>
+                      <span>{t('leftCount', { n: h.remaining })}</span>
                       <span className="muted">{h.at}</span>
-                      <span title="Owner notified">{h.notified ? '✉️' : '⚠️'}</span>
+                      <span title={t('ownerNotified')}>{h.notified ? '✉️' : '⚠️'}</span>
                     </div>
                   </li>
                 ))}

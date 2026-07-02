@@ -5,8 +5,10 @@
 // the same code from firing dozens of times per second.
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { useLang } from '../context/LanguageContext.jsx';
 
 export default function BarcodeScanner({ onDetected, active }) {
+  const { t } = useLang();
   const containerId = 'barcode-scanner-region';
   const scannerRef = useRef(null);
   const lastScanRef = useRef({ text: null, at: 0 });
@@ -41,10 +43,7 @@ export default function BarcodeScanner({ onDetected, active }) {
       )
       .then(() => setRunning(true))
       .catch((err) => {
-        setError(
-          err?.message ||
-            'Unable to access the camera. Grant camera permission and use HTTPS or localhost.'
-        );
+        setError(err?.message || t('cameraError'));
       });
 
     // Cleanup: stop and release the camera when unmounting / deactivating.
@@ -63,7 +62,7 @@ export default function BarcodeScanner({ onDetected, active }) {
     <div className="scanner">
       <div id={containerId} className="scanner__viewport" />
       {!running && !error && active && (
-        <p className="scanner__hint">Starting camera…</p>
+        <p className="scanner__hint">{t('startingCamera')}</p>
       )}
       {error && <p className="scanner__error">{error}</p>}
     </div>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, tokenStore } from '../api/client.js';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLang } from '../context/LanguageContext.jsx';
 import { useTelegramBackButton } from '../lib/telegram.js';
 
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
@@ -11,6 +12,7 @@ const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { lang, toggleLang, t } = useLang();
   const [overview, setOverview] = useState(null);
   const [stores, setStores] = useState(null);
   const [error, setError] = useState(null);
@@ -47,60 +49,63 @@ export default function AdminDashboard() {
       <header className="navbar">
         <div className="navbar__brand">
           <span className="navbar__logo">🛡️</span>
-          <span>Super Admin</span>
+          <span>{t('superAdmin')}</span>
         </div>
         <div className="navbar__actions">
-          <button className="icon-btn" title="Toggle light / dark theme" onClick={toggleTheme}>
+          <button className="icon-btn icon-btn--lang" title={t('changeLanguage')} onClick={toggleLang}>
+            {lang === 'en' ? 'አማ' : 'EN'}
+          </button>
+          <button className="icon-btn" title={t('toggleTheme')} onClick={toggleTheme}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
-          <button className="btn btn--ghost" onClick={logout}>Log out</button>
+          <button className="btn btn--ghost" onClick={logout}>{t('logout')}</button>
         </div>
       </header>
 
       <main className="container">
         <div className="page__head">
-          <h1>All stores</h1>
-          <p className="muted">Every registered account across the whole app.</p>
+          <h1>{t('allStores')}</h1>
+          <p className="muted">{t('allStoresDesc')}</p>
         </div>
 
-        {loading && <p className="muted">Loading…</p>}
+        {loading && <p className="muted">{t('loading')}</p>}
         {error && <p className="status status--error">{error}</p>}
 
         {!loading && !error && (
           <>
             <div className="stats">
               <div className="stat stat--indigo">
-                <span className="stat__label">Total stores</span>
+                <span className="stat__label">{t('totalStores')}</span>
                 <span className="stat__value">{overview?.storeCount ?? 0}</span>
               </div>
               <div className="stat stat--blue">
-                <span className="stat__label">Total items (all stores)</span>
+                <span className="stat__label">{t('totalItemsAll')}</span>
                 <span className="stat__value">{overview?.itemCount ?? 0}</span>
               </div>
               <div className="stat stat--amber">
-                <span className="stat__label">Sales revenue today</span>
+                <span className="stat__label">{t('salesRevenueToday')}</span>
                 <span className="stat__value">{money(overview?.salesTodayRevenue)}</span>
               </div>
             </div>
 
             <section className="card">
               <div className="card__head">
-                <h3>Stores <span className="badge">{stores?.length ?? 0}</span></h3>
+                <h3>{t('stores')} <span className="badge">{stores?.length ?? 0}</span></h3>
               </div>
               {!stores || stores.length === 0 ? (
-                <p className="muted">No stores registered yet.</p>
+                <p className="muted">{t('noStores')}</p>
               ) : (
                 <div className="table-wrap">
                   <table className="table">
                     <thead>
                       <tr>
-                        <th>Email</th>
-                        <th>Name</th>
-                        <th>Created</th>
-                        <th>Items</th>
-                        <th>Units</th>
-                        <th>Inventory value</th>
-                        <th>Sales today</th>
+                        <th>{t('thEmail')}</th>
+                        <th>{t('thName')}</th>
+                        <th>{t('thCreated')}</th>
+                        <th>{t('thItems')}</th>
+                        <th>{t('thUnits')}</th>
+                        <th>{t('thInvValue')}</th>
+                        <th>{t('thSalesToday')}</th>
                       </tr>
                     </thead>
                     <tbody>

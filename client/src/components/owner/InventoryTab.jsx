@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import ImportPanel from './ImportPanel.jsx';
+import { useLang } from '../../context/LanguageContext.jsx';
 
 const EMPTY = { barcode: '', name: '', price: '', quantity: '', low_stock_at: 5, sku: '' };
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 
 export default function InventoryTab({ refreshKey, bumpRefresh }) {
+  const { t } = useLang();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,7 +50,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
         },
       });
       setForm(EMPTY);
-      setNotice({ type: 'success', message: 'Item added.' });
+      setNotice({ type: 'success', message: t('itemAdded') });
       load();
       bumpRefresh?.();
     } catch (err) {
@@ -106,7 +108,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
   }
 
   async function remove(id) {
-    if (!window.confirm('Delete this item? This cannot be undone.')) return;
+    if (!window.confirm(t('confirmDelete'))) return;
     try {
       await api(`/api/owner/items/${id}`, { method: 'DELETE', owner: true });
       load();
@@ -122,15 +124,15 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
 
       {/* Add new item */}
       <section className="card">
-        <div className="card__head"><h3>➕ Add a new item</h3></div>
+        <div className="card__head"><h3>➕ {t('addNewItem')}</h3></div>
         <form onSubmit={handleAdd} className="item-form">
-          <input required placeholder="Barcode" value={form.barcode} onChange={updateForm('barcode')} />
-          <input required placeholder="Name" value={form.name} onChange={updateForm('name')} />
-          <input type="number" step="0.01" min="0" placeholder="Price" value={form.price} onChange={updateForm('price')} />
-          <input type="number" min="0" placeholder="Qty" value={form.quantity} onChange={updateForm('quantity')} />
-          <input type="number" min="0" placeholder="Low-stock at" value={form.low_stock_at} onChange={updateForm('low_stock_at')} />
-          <input placeholder="SKU (optional)" value={form.sku} onChange={updateForm('sku')} />
-          <button className="btn btn--primary">Add</button>
+          <input required placeholder={t('phBarcode')} value={form.barcode} onChange={updateForm('barcode')} />
+          <input required placeholder={t('phName')} value={form.name} onChange={updateForm('name')} />
+          <input type="number" step="0.01" min="0" placeholder={t('phPrice')} value={form.price} onChange={updateForm('price')} />
+          <input type="number" min="0" placeholder={t('phQty')} value={form.quantity} onChange={updateForm('quantity')} />
+          <input type="number" min="0" placeholder={t('phLowStock')} value={form.low_stock_at} onChange={updateForm('low_stock_at')} />
+          <input placeholder={t('phSku')} value={form.sku} onChange={updateForm('sku')} />
+          <button className="btn btn--primary">{t('add')}</button>
         </form>
         {notice && <p className={`status status--${notice.type}`}>{notice.message}</p>}
       </section>
@@ -138,23 +140,23 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
       {/* Inventory table */}
       <section className="card">
         <div className="card__head">
-          <h3>Inventory <span className="badge">{items.length}</span></h3>
-          <button className="btn btn--ghost" onClick={load}>Refresh</button>
+          <h3>{t('inventoryTitle')} <span className="badge">{items.length}</span></h3>
+          <button className="btn btn--ghost" onClick={load}>{t('refresh')}</button>
         </div>
 
         {loading ? (
-          <p className="muted">Loading inventory…</p>
+          <p className="muted">{t('loadingInventory')}</p>
         ) : error ? (
           <p className="status status--error">{error}</p>
         ) : items.length === 0 ? (
-          <p className="muted">No items yet. Import a spreadsheet or add one above.</p>
+          <p className="muted">{t('noItems')}</p>
         ) : (
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Name</th><th>Barcode</th><th>Price</th><th>Qty</th>
-                  <th>Low at</th><th>SKU</th><th></th>
+                  <th>{t('thName')}</th><th>{t('thBarcode')}</th><th>{t('thPrice')}</th><th>{t('thQty')}</th>
+                  <th>{t('thLowAt')}</th><th>SKU</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -164,12 +166,12 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                       <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
                       <td><input value={editRow.barcode} onChange={(e) => setEditRow({ ...editRow, barcode: e.target.value })} /></td>
                       <td><input type="number" step="0.01" min="0" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: e.target.value })} /></td>
-                      <td className="muted" title="Use the +/- controls to change stock.">{editRow.quantity}</td>
+                      <td className="muted" title={t('useStepper')}>{editRow.quantity}</td>
                       <td><input type="number" min="0" value={editRow.low_stock_at} onChange={(e) => setEditRow({ ...editRow, low_stock_at: e.target.value })} /></td>
                       <td><input value={editRow.sku || ''} onChange={(e) => setEditRow({ ...editRow, sku: e.target.value })} /></td>
                       <td className="row-actions">
-                        <button className="btn btn--small btn--primary" onClick={() => saveEdit(item.id)}>Save</button>
-                        <button className="btn btn--small btn--ghost" onClick={() => { setEditingId(null); setEditRow(null); }}>Cancel</button>
+                        <button className="btn btn--small btn--primary" onClick={() => saveEdit(item.id)}>{t('save')}</button>
+                        <button className="btn btn--small btn--ghost" onClick={() => { setEditingId(null); setEditRow(null); }}>{t('cancel')}</button>
                       </td>
                     </tr>
                   ) : (
@@ -184,7 +186,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                             className="stepper__btn"
                             disabled={adjustingId === item.id || item.quantity === 0}
                             onClick={() => adjustStock(item.id, -1)}
-                            title="Remove stock"
+                            title={t('removeStock')}
                           >
                             −
                           </button>
@@ -194,7 +196,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                             className="stepper__btn"
                             disabled={adjustingId === item.id}
                             onClick={() => adjustStock(item.id, 1)}
-                            title="Add stock"
+                            title={t('addStock')}
                           >
                             +
                           </button>
@@ -206,19 +208,19 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                             onChange={(e) =>
                               setStepAmount((s) => ({ ...s, [item.id]: e.target.value }))
                             }
-                            title="Amount to add/remove per click"
+                            title={t('stepAmountTitle')}
                           />
                         </div>
-                        {item.quantity === 0 && <span className="badge badge--danger">OUT</span>}
+                        {item.quantity === 0 && <span className="badge badge--danger">{t('outBadge')}</span>}
                         {item.quantity > 0 && item.quantity <= item.low_stock_at && (
-                          <span className="badge badge--warning">LOW</span>
+                          <span className="badge badge--warning">{t('lowBadge')}</span>
                         )}
                       </td>
                       <td className="muted">{item.low_stock_at}</td>
                       <td className="muted">{item.sku || '—'}</td>
                       <td className="row-actions">
-                        <button className="btn btn--small btn--secondary" onClick={() => startEdit(item)}>Edit</button>
-                        <button className="btn btn--small btn--danger" onClick={() => remove(item.id)}>Delete</button>
+                        <button className="btn btn--small btn--secondary" onClick={() => startEdit(item)}>{t('edit')}</button>
+                        <button className="btn btn--small btn--danger" onClick={() => remove(item.id)}>{t('delete')}</button>
                       </td>
                     </tr>
                   )

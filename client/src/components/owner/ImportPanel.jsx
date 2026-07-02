@@ -6,8 +6,10 @@
 // first); otherwise rows are merged by barcode.
 import { useRef, useState } from 'react';
 import { uploadFile } from '../../api/client.js';
+import { useLang } from '../../context/LanguageContext.jsx';
 
 export default function ImportPanel({ onImported }) {
+  const { t } = useLang();
   const fileRef = useRef(null);
   const [file, setFile] = useState(null);
   const [replace, setReplace] = useState(false);
@@ -38,11 +40,11 @@ export default function ImportPanel({ onImported }) {
   return (
     <section className="card import">
       <div className="card__head">
-        <h3>📥 Import from Excel / CSV</h3>
+        <h3>📥 {t('importTitle')}</h3>
       </div>
       <p className="muted">
-        Upload a spreadsheet to build your inventory automatically. Required
-        columns: <code>barcode</code> and <code>name</code>. Optional:
+        {t('importIntro1')} <code>barcode</code>, <code>name</code>.{' '}
+        {t('importIntro2')}
         <code> price</code>, <code>quantity</code>, <code>low_stock_at</code>,
         <code> sku</code>.
       </p>
@@ -60,14 +62,14 @@ export default function ImportPanel({ onImported }) {
             checked={replace}
             onChange={(e) => setReplace(e.target.checked)}
           />
-          <span>Replace existing inventory</span>
+          <span>{t('replaceExisting')}</span>
         </label>
         <button
           className="btn btn--primary"
           onClick={handleUpload}
           disabled={!file || busy}
         >
-          {busy ? 'Importing…' : 'Upload & import'}
+          {busy ? t('importing') : t('uploadImport')}
         </button>
       </div>
 
@@ -78,10 +80,10 @@ export default function ImportPanel({ onImported }) {
           <p>{result.message}</p>
           {result.skipped?.length > 0 && (
             <details className="import__skipped">
-              <summary>{result.skipped.length} row(s) skipped</summary>
+              <summary>{t('rowsSkipped', { n: result.skipped.length })}</summary>
               <ul>
                 {result.skipped.map((s) => (
-                  <li key={s.row}>Row {s.row}: {s.message}</li>
+                  <li key={s.row}>{t('rowLabel', { row: s.row, message: s.message })}</li>
                 ))}
               </ul>
             </details>
