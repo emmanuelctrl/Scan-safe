@@ -1,7 +1,8 @@
-// Data access for the Super Admin panel — read-only, cross-account views.
-// Every query is explicit about the columns it selects (never `SELECT *` on
-// `users`) so password hashes are never pulled into an admin response.
-import { all, get } from '../config/database.js';
+// Data access for the Super Admin panel — cross-account views plus store
+// removal. Every query is explicit about the columns it selects (never
+// `SELECT *` on `users`) so password hashes are never pulled into an admin
+// response.
+import { all, get, withTransaction } from '../config/database.js';
 
 export const AdminModel = {
   /** Every store with a quick snapshot of inventory + today's sales. */
@@ -37,6 +38,26 @@ export const AdminModel = {
       ) s ON s.user_id = u.id
       ORDER BY u.created_at DESC
     `);
+  },
+
+  /**
+   * Permanently delete a store (user) and every row that belongs to it.
+   * Children are removed explicitly inside one transaction rather than
+   * relying on ON DELETE CASCADE, which needs the foreign_keys pragma to be
+   * active on the current connection.
+   * @returns {Promise<boolean>} true if the user existed and was deleted.
+   */
+  removeStore(userId) {
+    return withTransaction(async (tx) => {
+      const user = await tx.get('SELECT id FROM users WHERE id = ?', [userId]);
+      if (!user) return false;
+      await tx.run('DELETE FROM scans WHERE user_id = ?', [userId]);
+      await tx.run('DELETE FROM stock_movements WHERE user_id = ?', [userId]);
+      await tx.run('DELETE FROM items WHERE user_id = ?', [userId]);
+      await tx.run('DELETE FROM settings WHERE user_id = ?', [userId]);
+      await tx.run('DELETE FROM users WHERE id = ?', [userId]);
+      return true;
+    });
   },
 
   /** App-wide totals for the admin dashboard header. */

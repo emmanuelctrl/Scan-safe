@@ -47,4 +47,19 @@ router.get(
   })
 );
 
+// DELETE /api/admin/stores/:id — permanently remove a store (user account)
+// and all of its data: items, scans, stock movements, and settings.
+router.delete(
+  '/stores/:id',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw ApiError.badRequest('Invalid store id.');
+    }
+    const removed = await AdminModel.removeStore(id);
+    if (!removed) throw ApiError.notFound('Store not found.');
+    res.json({ message: 'Store deleted.' });
+  })
+);
+
 export default router;

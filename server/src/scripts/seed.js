@@ -12,6 +12,7 @@ const DEMO_USER = {
   password: 'password123',
   name: 'Demo Owner',
   role: 'owner',
+  emailVerified: true, // Demo account skips email verification.
 };
 
 const SAMPLE_ITEMS = [

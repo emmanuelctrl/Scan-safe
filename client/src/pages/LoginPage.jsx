@@ -6,14 +6,16 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { useLang } from '../context/LanguageContext.jsx';
 
 export default function LoginPage() {
-  const { login, register, loading } = useAuth();
+  const { login, register, verifyEmail, resendVerification, loading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { lang, toggleLang, t } = useLang();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'verify'
   const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [code, setCode] = useState('');
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const update = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -21,17 +23,53 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     try {
       if (mode === 'login') {
         await login(form.email, form.password);
       } else {
-        await register({
+        const res = await register({
           email: form.email,
           password: form.password,
           name: form.name || undefined,
         });
+        if (res?.requiresVerification) {
+          setMode('verify');
+          setCode('');
+          return;
+        }
       }
       navigate('/worker');
+    } catch (err) {
+      // An unverified account can't sign in — jump to the code screen.
+      if (err.details?.requiresVerification) {
+        setMode('verify');
+        setCode('');
+        return;
+      }
+      setError(err.message);
+    }
+  }
+
+  async function handleVerify(e) {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    try {
+      await verifyEmail(form.email, code);
+      navigate('/worker');
+    } catch (err) {
+      setError(err.message);
+      setCode('');
+    }
+  }
+
+  async function handleResend() {
+    setError(null);
+    setNotice(null);
+    try {
+      await resendVerification(form.email);
+      setNotice(t('codeResent'));
     } catch (err) {
       setError(err.message);
     }
@@ -54,6 +92,56 @@ export default function LoginPage() {
         {theme === 'light' ? '🌙' : '☀️'}
       </button>
 
+      {mode === 'verify' ? (
+        <div className="auth__card card">
+          <div className="auth__brand">
+            <span className="auth__logo">📧</span>
+            <h1>{t('verifyTitle')}</h1>
+            <p className="muted">{t('verifySent', { email: form.email })}</p>
+          </div>
+
+          <form onSubmit={handleVerify} className="form">
+            <label className="field">
+              <span>{t('verifyCodeLabel')}</span>
+              <input
+                className="pin__input"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="\d{6}"
+                maxLength={6}
+                placeholder="••••••"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                autoFocus
+              />
+            </label>
+
+            {error && <p className="form__error">{error}</p>}
+            {notice && <p className="status status--info">{notice}</p>}
+
+            <button
+              className="btn btn--primary btn--block"
+              disabled={loading || code.length !== 6}
+            >
+              {loading ? t('checking') : t('verifyBtn')}
+            </button>
+          </form>
+
+          <p className="auth__switch muted">
+            <button className="link" type="button" onClick={handleResend}>
+              {t('resendCode')}
+            </button>
+            {' · '}
+            <button
+              className="link"
+              type="button"
+              onClick={() => { setMode('login'); setError(null); setNotice(null); }}
+            >
+              {t('backToSignIn')}
+            </button>
+          </p>
+        </div>
+      ) : (
       <div className="auth__card card">
         <div className="auth__brand">
           <span className="auth__logo">🛍️</span>
@@ -141,6 +229,7 @@ export default function LoginPage() {
           </button>
         </p>
       </div>
+      )}
     </div>
   );
 }
