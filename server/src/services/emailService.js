@@ -80,6 +80,44 @@ export async function sendScanNotification({ to, item, action, quantity, worker 
   return { delivered: true, simulated: false };
 }
 
+/**
+ * Send the 6-digit email verification code for a new account.
+ * Falls back to console logging when SMTP isn't configured (dev).
+ */
+export async function sendVerificationEmail({ to, code }) {
+  const subject = '🛍️ Inventory Tracker: your verification code';
+  const text =
+    `Welcome to Inventory Tracker!\n\n` +
+    `Your verification code is: ${code}\n\n` +
+    `Enter it on the sign-in page to activate your account. ` +
+    `The code expires in 15 minutes.\n\n` +
+    `If you didn't create an account, you can ignore this email.`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: auto;">
+      <h2 style="color:#4f46e5;">🛍️ Inventory Tracker</h2>
+      <p>Welcome! Enter this code on the sign-in page to activate your account:</p>
+      <p style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#111827;
+                background:#f0f1f6;border-radius:10px;padding:14px 0;text-align:center;">
+        ${code}
+      </p>
+      <p style="color:#6b7280;font-size:12px;">
+        The code expires in 15 minutes. If you didn't create an account, you can
+        ignore this email.
+      </p>
+    </div>`;
+
+  if (!transporter) {
+    console.log('\n[email:dev] SMTP not configured — verification email not sent.');
+    console.log(`[email:dev] To: ${to}`);
+    console.log(`[email:dev] Verification code: ${code}`);
+    return { delivered: false, simulated: true };
+  }
+
+  await transporter.sendMail({ from: config.smtp.from, to, subject, text, html });
+  return { delivered: true, simulated: false };
+}
+
 function row(label, value) {
   return `<tr>
     <td style="padding:6px 10px;border:1px solid #e5e7eb;color:#374151;font-weight:bold;">${label}</td>

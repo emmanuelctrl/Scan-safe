@@ -13,7 +13,10 @@ separate inventory and dashboard** — and inventory can be built in seconds by
 
 ## ✨ Features
 
-- **Email / password authentication** — sign in or create an account.
+- **Email / password authentication** — sign in or create an account, with
+  **email verification**: new accounts get a 6-digit code by email and must
+  enter it before they can sign in (without SMTP configured, the code is
+  logged to the server console for local development).
 - **Worker portal** with a live **camera barcode/QR scanner** (plus manual
   entry). Every scan checks the item out and **emails the store owner**.
 - **Owner portal** locked behind a **6-digit PIN** (customizable), showing:
@@ -192,8 +195,10 @@ obtained by verifying the PIN at `POST /api/owner/unlock`.
 
 | Method | Endpoint | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | – | Create an account |
-| `POST` | `/api/auth/login` | – | Sign in |
+| `POST` | `/api/auth/register` | – | Create an account (emails a verification code) |
+| `POST` | `/api/auth/verify` | – | Confirm the emailed code → sign in |
+| `POST` | `/api/auth/resend-verification` | – | Email a fresh verification code |
+| `POST` | `/api/auth/login` | – | Sign in (verified accounts only) |
 | `POST` | `/api/scan` | login | Scan/checkout a barcode (emails owner) |
 | `GET`  | `/api/scan/lookup/:barcode` | login | Preview an item |
 | `POST` | `/api/owner/unlock` | login | Verify PIN → owner token |
@@ -209,6 +214,7 @@ obtained by verifying the PIN at `POST /api/owner/unlock`.
 | `POST` | `/api/admin/login` | – | Verify admin password → admin token |
 | `GET` | `/api/admin/overview` | admin | App-wide totals (all stores) |
 | `GET` | `/api/admin/stores` | admin | Every registered store + snapshot |
+| `DELETE` | `/api/admin/stores/:id` | admin | Remove a store and all its data |
 | `GET` | `/api/health` | – | Health check |
 
 ---
@@ -225,8 +231,9 @@ completely independent of any individual store's account login or Owner PIN.
 - Protected by its own short-lived token (`x-admin-token` header, 2h expiry)
   issued by `POST /api/admin/login`, and by the same rate limiter as the auth
   endpoints to slow down brute-force attempts against the password.
-- Read-only: it reports on stores but does not expose password hashes or let
-  you edit another store's data.
+- The admin can **permanently delete a store** (the account and all of its
+  items, sales history, and settings) from the stores table. Everything else
+  is read-only, and password hashes are never exposed.
 
 ---
 

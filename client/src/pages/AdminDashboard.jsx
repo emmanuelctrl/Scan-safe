@@ -16,28 +16,43 @@ export default function AdminDashboard() {
   const [overview, setOverview] = useState(null);
   const [stores, setStores] = useState(null);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
   useTelegramBackButton(true, useCallback(() => navigate('/login'), [navigate]));
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
     Promise.all([
       api('/api/admin/overview', { admin: true }),
       api('/api/admin/stores', { admin: true }),
     ])
       .then(([o, s]) => {
-        if (cancelled) return;
         setOverview(o.overview);
         setStores(s.stores);
       })
-      .catch((e) => {
-        if (cancelled) return;
-        setError(e.message);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(load, [load]);
+
+  async function removeStore(store) {
+    if (!window.confirm(`${store.email}\n\n${t('confirmDeleteStore')}`)) return;
+    setDeletingId(store.id);
+    setNotice(null);
+    try {
+      await api(`/api/admin/stores/${store.id}`, { method: 'DELETE', admin: true });
+      setNotice({ type: 'success', message: t('storeDeleted') });
+      load();
+    } catch (err) {
+      setNotice({ type: 'error', message: err.message });
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   function logout() {
     tokenStore.clearAdmin();
@@ -70,6 +85,7 @@ export default function AdminDashboard() {
 
         {loading && <p className="muted">{t('loading')}</p>}
         {error && <p className="status status--error">{error}</p>}
+        {notice && <p className={`status status--${notice.type}`}>{notice.message}</p>}
 
         {!loading && !error && (
           <>
@@ -106,6 +122,7 @@ export default function AdminDashboard() {
                         <th>{t('thUnits')}</th>
                         <th>{t('thInvValue')}</th>
                         <th>{t('thSalesToday')}</th>
+                        <th>{t('thActions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -118,6 +135,15 @@ export default function AdminDashboard() {
                           <td>{s.totalUnits}</td>
                           <td>{money(s.inventoryValue)}</td>
                           <td>{s.salesTodayCount} · {money(s.salesTodayRevenue)}</td>
+                          <td className="row-actions">
+                            <button
+                              className="btn btn--small btn--danger"
+                              disabled={deletingId === s.id}
+                              onClick={() => removeStore(s)}
+                            >
+                              {t('delete')}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
