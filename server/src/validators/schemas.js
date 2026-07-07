@@ -23,13 +23,6 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required.'),
 });
 
-export const verifyEmailSchema = z.object({
-  email,
-  code: z.string().regex(/^\d{6}$/, 'Code must be exactly 6 digits.'),
-});
-
-export const resendVerificationSchema = z.object({ email });
-
 export const itemSchema = z.object({
   barcode: z.string().trim().min(1, 'Barcode is required.').max(64),
   name: z.string().trim().min(1, 'Name is required.').max(120),

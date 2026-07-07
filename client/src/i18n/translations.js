@@ -36,13 +36,6 @@ export const translations = {
     alreadyRegistered: 'Already registered? ',
     createOne: 'Create one',
     adminLogin: 'Admin login',
-    verifyTitle: 'Verify your email',
-    verifySent: 'We sent a 6-digit code to {email}. Enter it below to activate your account.',
-    verifyCodeLabel: 'Verification code',
-    verifyBtn: 'Verify & sign in',
-    resendCode: 'Resend code',
-    codeResent: 'If that account needs verification, a new code has been sent.',
-    backToSignIn: 'Back to sign in',
 
     // ── Worker portal ───────────────────────────────────────
     workerPortal: 'Worker Portal',
@@ -213,13 +206,6 @@ export const translations = {
     alreadyRegistered: 'አስቀድመው ተመዝግበዋል? ',
     createOne: 'ይፍጠሩ',
     adminLogin: 'የአስተዳዳሪ መግቢያ',
-    verifyTitle: 'ኢሜይልዎን ያረጋግጡ',
-    verifySent: 'ባለ 6 አኃዝ ኮድ ወደ {email} ልከናል። መለያዎን ለማንቃት ከታች ያስገቡት።',
-    verifyCodeLabel: 'የማረጋገጫ ኮድ',
-    verifyBtn: 'አረጋግጥ እና ግባ',
-    resendCode: 'ኮድ እንደገና ላክ',
-    codeResent: 'መለያው ማረጋገጫ የሚያስፈልገው ከሆነ አዲስ ኮድ ተልኳል።',
-    backToSignIn: 'ወደ መግቢያ ተመለስ',
 
     // ── Worker portal ───────────────────────────────────────
     workerPortal: 'የሠራተኛ ገጽ',

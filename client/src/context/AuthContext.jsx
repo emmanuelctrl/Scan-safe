@@ -42,21 +42,9 @@ export function AuthProvider({ children }) {
       // Clear any previous account's tokens before registering.
       tokenStore.clear();
       tokenStore.clearOwner();
-      // Registration doesn't sign in — the account must first be activated
-      // with the 6-digit code emailed to the user.
-      return await api('/api/auth/register', { method: 'POST', body: payload });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  /** Confirm the emailed 6-digit code; on success the user is signed in. */
-  async function verifyEmail(email, code) {
-    setLoading(true);
-    try {
-      const { token, user: u } = await api('/api/auth/verify', {
+      const { token, user: u } = await api('/api/auth/register', {
         method: 'POST',
-        body: { email, code },
+        body: payload,
       });
       tokenStore.set(token);
       setUser(u);
@@ -66,11 +54,6 @@ export function AuthProvider({ children }) {
     }
   }
 
-  /** Ask the server to email a fresh verification code. */
-  function resendVerification(email) {
-    return api('/api/auth/resend-verification', { method: 'POST', body: { email } });
-  }
-
   function logout() {
     tokenStore.clear();
     tokenStore.clearOwner();
@@ -78,16 +61,7 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({
-      user,
-      loading,
-      login,
-      register,
-      verifyEmail,
-      resendVerification,
-      logout,
-      isAuthenticated: !!user,
-    }),
+    () => ({ user, loading, login, register, logout, isAuthenticated: !!user }),
     [user, loading]
   );
 

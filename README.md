@@ -13,10 +13,7 @@ separate inventory and dashboard** — and inventory can be built in seconds by
 
 ## ✨ Features
 
-- **Email / password authentication** — sign in or create an account, with
-  **email verification**: new accounts get a 6-digit code by email and must
-  enter it before they can sign in (without SMTP configured, the code is
-  logged to the server console for local development).
+- **Email / password authentication** — sign in or create an account.
 - **Worker portal** with a live **camera barcode/QR scanner** (plus manual
   entry). Every scan checks the item out and **emails the store owner**.
 - **Owner portal** locked behind a **6-digit PIN** (customizable), showing:
@@ -195,10 +192,8 @@ obtained by verifying the PIN at `POST /api/owner/unlock`.
 
 | Method | Endpoint | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | – | Create an account (emails a verification code) |
-| `POST` | `/api/auth/verify` | – | Confirm the emailed code → sign in |
-| `POST` | `/api/auth/resend-verification` | – | Email a fresh verification code |
-| `POST` | `/api/auth/login` | – | Sign in (verified accounts only) |
+| `POST` | `/api/auth/register` | – | Create an account |
+| `POST` | `/api/auth/login` | – | Sign in |
 | `POST` | `/api/scan` | login | Scan/checkout a barcode (emails owner) |
 | `GET`  | `/api/scan/lookup/:barcode` | login | Preview an item |
 | `POST` | `/api/owner/unlock` | login | Verify PIN → owner token |
