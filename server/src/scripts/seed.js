@@ -16,11 +16,13 @@ const DEMO_USER = {
 };
 
 const SAMPLE_ITEMS = [
-  { barcode: '0001112223334', name: 'Silk Scarf', price: 45.0, quantity: 12, low_stock_at: 5, sku: 'ACC-SCF-01' },
-  { barcode: '0001112223335', name: 'Leather Handbag', price: 189.99, quantity: 3, low_stock_at: 4, sku: 'BAG-LTH-02' },
-  { barcode: '0001112223336', name: 'Cotton T-Shirt', price: 24.5, quantity: 0, low_stock_at: 6, sku: 'APP-TSH-03' },
-  { barcode: '0001112223337', name: 'Wool Beanie', price: 19.99, quantity: 25, low_stock_at: 8, sku: 'ACC-BNE-04' },
-  { barcode: '0001112223338', name: 'Denim Jacket', price: 89.0, quantity: 2, low_stock_at: 3, sku: 'APP-JKT-05' },
+  { barcode: '0001112223334', name: 'Silk Scarf', price: 45.0, quantity: 12, low_stock_at: 5, sku: 'ACC-SCF-01', category: 'Accessories' },
+  { barcode: '0001112223335', name: 'Leather Handbag', price: 189.99, quantity: 3, low_stock_at: 4, sku: 'BAG-LTH-02', category: 'Bags' },
+  { barcode: '0001112223336', name: 'Cotton T-Shirt', price: 24.5, quantity: 0, low_stock_at: 6, sku: 'APP-TSH-03', category: 'Apparel' },
+  { barcode: '0001112223337', name: 'Wool Beanie', price: 19.99, quantity: 25, low_stock_at: 8, sku: 'ACC-BNE-04', category: 'Accessories' },
+  { barcode: '0001112223338', name: 'Denim Jacket', price: 89.0, quantity: 2, low_stock_at: 3, sku: 'APP-JKT-05', category: 'Apparel' },
+  { barcode: '0001112223342', name: 'Leather Loafers', price: 120.0, quantity: 6, low_stock_at: 3, sku: 'SHO-LFR-09', category: 'Shoes' },
+  { barcode: '0001112223343', name: 'Running Sneakers', price: 95.0, quantity: 10, low_stock_at: 4, sku: 'SHO-SNK-10', category: 'Shoes' },
 ];
 
 async function run() {

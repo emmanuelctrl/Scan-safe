@@ -24,7 +24,7 @@ router.post(
   '/',
   asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const { barcode, action, quantity } = validate(scanSchema, req.body);
+    const { barcode, action, quantity, price } = validate(scanSchema, req.body);
 
     const item = await ItemModel.findByBarcode(userId, barcode);
     if (!item) {
@@ -37,6 +37,10 @@ router.post(
       );
     }
 
+    // The price the sale is recorded at: the worker's adjustment if provided,
+    // otherwise the item's stored price.
+    const unitPrice = price ?? item.price;
+
     // Apply stock change for checkouts.
     const updatedItem =
       action === 'checkout' ? await ItemModel.decrementStock(userId, item.id, quantity) : item;
@@ -48,6 +52,7 @@ router.post(
       workerEmail: req.user.email,
       action,
       quantity,
+      unitPrice,
     });
 
     // Notify the owner. Email failures must NOT fail the scan, so we catch them.
@@ -59,6 +64,8 @@ router.post(
         item: updatedItem,
         action,
         quantity,
+        unitPrice,
+        listPrice: item.price,
         worker: req.user.email,
       });
     } catch (err) {
@@ -69,8 +76,31 @@ router.post(
     res.status(201).json({
       message: `"${updatedItem.name}" ${action === 'checkout' ? 'checked out' : 'scanned'} successfully.`,
       item: updatedItem,
+      sale: { quantity, unitPrice, total: unitPrice * quantity },
       notification,
     });
+  })
+);
+
+// GET /api/scan/categories — distinct item categories for this store, so the
+// worker can browse items (e.g. types of shoes) without scanning.
+router.get(
+  '/categories',
+  asyncHandler(async (req, res) => {
+    res.json({ categories: await ItemModel.categories(req.user.id) });
+  })
+);
+
+// GET /api/scan/items?category=… — items in one category (or all items), so a
+// worker can tap an item to sell it instead of scanning its barcode.
+router.get(
+  '/items',
+  asyncHandler(async (req, res) => {
+    const category = String(req.query.category ?? '').trim();
+    const items = await ItemModel.findAll(req.user.id, {
+      category: category || undefined,
+    });
+    res.json({ items });
   })
 );
 

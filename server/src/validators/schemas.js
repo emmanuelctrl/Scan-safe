@@ -37,6 +37,7 @@ export const itemSchema = z.object({
   quantity: z.coerce.number().int().min(0, 'Quantity cannot be negative.'),
   low_stock_at: z.coerce.number().int().min(0).default(5),
   sku: z.string().trim().max(64).optional(),
+  category: z.string().trim().max(64).optional(),
 });
 
 // For edits every field is optional, but at least the shape is validated.
@@ -46,6 +47,9 @@ export const scanSchema = z.object({
   barcode: z.string().trim().min(1, 'Barcode is required.').max(64),
   action: z.enum(['scan', 'checkout']).default('checkout'),
   quantity: z.coerce.number().int().min(1).max(1000).default(1),
+  // Optional per-sale price override (e.g. a negotiated discount). When
+  // omitted, the item's stored price is used.
+  price: z.coerce.number().min(0, 'Price cannot be negative.').optional(),
 });
 
 export const unlockSchema = z.object({ pin });

@@ -3,12 +3,17 @@
 import { get, all, run } from '../config/database.js';
 
 export const ScanModel = {
-  /** Record an immutable scan/checkout entry for a store. */
-  async create({ userId, item, workerEmail, action = 'checkout', quantity = 1 }) {
+  /**
+   * Record an immutable scan/checkout entry for a store.
+   * `unitPrice` overrides the item's stored price (worker price adjustment);
+   * when omitted the ledger records the item's current price.
+   */
+  async create({ userId, item, workerEmail, action = 'checkout', quantity = 1, unitPrice }) {
     const info = await run(
       `INSERT INTO scans (user_id, item_id, worker_email, barcode, item_name, unit_price, quantity, action)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, item.id, workerEmail || null, item.barcode, item.name, item.price, quantity, action]
+      [userId, item.id, workerEmail || null, item.barcode, item.name,
+       unitPrice ?? item.price, quantity, action]
     );
     return get('SELECT * FROM scans WHERE id = ?', [info.lastInsertRowid]);
   },

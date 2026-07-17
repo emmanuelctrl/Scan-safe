@@ -112,6 +112,7 @@ const SCHEMA_SQL = `
     quantity       INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
     low_stock_at   INTEGER NOT NULL DEFAULT 5 CHECK (low_stock_at >= 0),
     sku            TEXT,
+    category       TEXT,
     created_at     TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (user_id, barcode)
@@ -173,6 +174,12 @@ async function migrate() {
   }
   if (!names.has('verification_expires_at')) {
     await base.run(`ALTER TABLE users ADD COLUMN verification_expires_at TEXT`);
+  }
+
+  const itemCols = await base.all(`PRAGMA table_info(items)`);
+  const itemNames = new Set(itemCols.map((c) => c.name));
+  if (!itemNames.has('category')) {
+    await base.run(`ALTER TABLE items ADD COLUMN category TEXT`);
   }
 }
 

@@ -28,6 +28,9 @@ const HEADER_ALIASES = {
   threshold: 'low_stock_at', minstock: 'low_stock_at', min: 'low_stock_at',
 
   sku: 'sku', skucode: 'sku', ref: 'sku', reference: 'sku',
+
+  category: 'category', categoryname: 'category', type: 'category',
+  producttype: 'category', itemtype: 'category', group: 'category',
 };
 
 /** Normalise a header into lowercase alphanumerics only. */
@@ -130,6 +133,7 @@ export async function parseInventoryFile(buffer, filename) {
       quantity: cleanNumber(raw.quantity ?? 0) ?? 0,
       low_stock_at: cleanNumber(raw.low_stock_at ?? 5) ?? 5,
       sku: raw.sku ? String(raw.sku).trim() : undefined,
+      category: raw.category ? String(raw.category).trim() : undefined,
     };
 
     const result = itemSchema.safeParse(candidate);
