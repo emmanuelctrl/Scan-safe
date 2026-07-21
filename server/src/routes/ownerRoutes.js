@@ -14,7 +14,7 @@ import { ScanModel } from '../models/scanModel.js';
 import { StockModel } from '../models/stockModel.js';
 import { SettingsModel } from '../models/settingsModel.js';
 import { parseInventoryFile } from '../services/importService.js';
-import { invalidateGmailTransporter } from '../services/emailService.js';
+import { invalidateGmailTransporter, sendTestEmail, describeSmtpError } from '../services/emailService.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireOwner, issueOwnerToken } from '../middleware/ownerPin.js';
 import { uploadSpreadsheet } from '../middleware/upload.js';
@@ -247,6 +247,30 @@ router.put(
     if (previous?.smtp_user) invalidateGmailTransporter(previous.smtp_user);
     await SettingsModel.setSmtpCredentials(userId, smtpUser, smtpPass);
     res.json({ settings: SettingsModel.toPublic(await SettingsModel.get(userId)) });
+  })
+);
+
+// POST /api/owner/settings/smtp/test — send a test email using the stored
+// Gmail credentials and surface the real error if Gmail rejects it, so the
+// owner can tell exactly why notifications aren't arriving.
+router.post(
+  '/settings/smtp/test',
+  asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const settings = await SettingsModel.get(userId);
+    const smtp = await SettingsModel.getSmtpCredentials(userId);
+    if (!smtp) {
+      throw ApiError.badRequest('Add and save your Gmail address and App Password first, then test.');
+    }
+    try {
+      await sendTestEmail({ to: settings.notification_email, smtp });
+    } catch (err) {
+      console.error('[smtp:test] send failed:', err.message);
+      throw ApiError.badRequest(describeSmtpError(err));
+    }
+    res.json({
+      message: `Test email sent to ${settings.notification_email}. Check your inbox (and spam folder).`,
+    });
   })
 );
 

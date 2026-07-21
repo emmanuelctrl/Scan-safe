@@ -50,6 +50,44 @@ export function invalidateGmailTransporter(user) {
 }
 
 /**
+ * Turn a raw nodemailer/SMTP error into a short, actionable message an owner
+ * can act on, instead of a cryptic stack trace.
+ */
+export function describeSmtpError(err) {
+  const code = err?.code;
+  const resp = err?.response || err?.message || '';
+  if (code === 'EAUTH' || /5\.7\.8|Username and Password not accepted|BadCredentials/i.test(resp)) {
+    return 'Gmail did not accept the address or App Password. Turn on 2-Step Verification on that Google account and use a 16-character App Password (not your normal password).';
+  }
+  if (['ETIMEDOUT', 'ESOCKET', 'ECONNECTION', 'ECONNREFUSED', 'EDNS'].includes(code)) {
+    return "Couldn't reach Gmail's mail server on port 465. The host running this app may block outbound SMTP (common on free hosting) — try a host that allows it, or run locally.";
+  }
+  return err?.message || 'Unknown email error.';
+}
+
+/**
+ * Send a one-off test email to confirm an account's Gmail credentials work.
+ * Throws the raw error on failure so the caller can describe it.
+ */
+export async function sendTestEmail({ to, smtp }) {
+  const transporter = smtp ? getGmailTransporter(smtp) : globalTransporter;
+  const from = smtp ? `Inventory Tracker <${smtp.user}>` : config.smtp.from;
+  if (!transporter) {
+    return { delivered: false, simulated: true };
+  }
+  await transporter.sendMail({
+    from,
+    to,
+    subject: '✅ Inventory Tracker — test email',
+    text:
+      'This is a test from Inventory Tracker.\n\n' +
+      'If you can read this, your checkout notifications are set up correctly — ' +
+      'every checkout will now email this address.',
+  });
+  return { delivered: true };
+}
+
+/**
  * Notify the owner that an item was scanned/checked out.
  * @param {object} params
  * @param {string} params.to          Destination email (owner's notification address).
