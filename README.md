@@ -168,6 +168,15 @@ settings. The App Password is encrypted at rest with `CREDENTIAL_SECRET` (see
 below) and is never returned to the browser. A regular Google password will not
 work — App Passwords require 2-Step Verification to be enabled on the account.
 
+After saving, use the **Send test email** button in that Settings card to
+confirm it works — it reports the exact reason if Gmail rejects the send. The
+two common failures are: **(1)** the address/App Password isn't accepted (turn
+on 2-Step Verification and use a 16-character App Password), or **(2)** the host
+running the backend **blocks outbound SMTP on port 465** — common on free
+hosting tiers (e.g. Render free). If your host blocks SMTP, Gmail sending can't
+work there no matter what; run somewhere that permits outbound SMTP, or use a
+provider whose SMTP port is open.
+
 ### Frontend (`client/.env`)
 
 | Variable | Description |

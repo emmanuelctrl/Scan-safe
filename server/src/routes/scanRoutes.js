@@ -7,7 +7,7 @@ import { Router } from 'express';
 import { ItemModel } from '../models/itemModel.js';
 import { ScanModel } from '../models/scanModel.js';
 import { SettingsModel } from '../models/settingsModel.js';
-import { sendScanNotification } from '../services/emailService.js';
+import { sendScanNotification, describeSmtpError } from '../services/emailService.js';
 import { scanSchema } from '../validators/schemas.js';
 import { validate } from '../utils/validate.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -72,7 +72,7 @@ router.post(
       });
     } catch (err) {
       console.error('[scan] Failed to send owner notification:', err.message);
-      notification = { delivered: false, error: 'Notification could not be sent.' };
+      notification = { delivered: false, error: describeSmtpError(err) };
     }
 
     res.status(201).json({

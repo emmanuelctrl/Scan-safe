@@ -96,6 +96,16 @@ export default function SettingsTab() {
     }
   }
 
+  async function testSmtp() {
+    setSmtpMsg({ type: 'info', message: t('notifTesting') });
+    try {
+      const d = await api('/api/owner/settings/smtp/test', { method: 'POST', owner: true });
+      setSmtpMsg({ type: 'success', message: d.message });
+    } catch (err) {
+      setSmtpMsg({ type: 'error', message: err.message });
+    }
+  }
+
   async function applyTheme(next) {
     setTheme(next); // Instant UI feedback.
     try {
@@ -189,6 +199,11 @@ export default function SettingsTab() {
           {smtpMsg && <p className={`status status--${smtpMsg.type}`}>{smtpMsg.message}</p>}
           <div className="row-actions">
             <button className="btn btn--primary">{t('notifSave')}</button>
+            {settings?.smtp_configured && (
+              <button type="button" className="btn btn--secondary" onClick={testSmtp}>
+                {t('notifTest')}
+              </button>
+            )}
             {settings?.smtp_configured && (
               <button type="button" className="btn btn--ghost" onClick={removeSmtp}>
                 {t('notifRemove')}
