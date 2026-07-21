@@ -74,6 +74,18 @@ const config = {
     pass: process.env.SMTP_PASS || '',
     from: process.env.MAIL_FROM || 'Inventory Tracker <no-reply@example.com>',
   },
+
+  // Resend (https://resend.com) — an HTTP email API that sends over HTTPS, so
+  // it works even on hosts that block outbound SMTP (Render free tier, etc.).
+  // Set RESEND_API_KEY to enable it; it then takes priority over SMTP.
+  resend: {
+    apiKey: process.env.RESEND_API_KEY || '',
+    // Until you verify your own domain in Resend, its test sender
+    // `onboarding@resend.dev` only delivers to your Resend account's email.
+    from: process.env.MAIL_FROM || 'Inventory Tracker <onboarding@resend.dev>',
+    // Overridable for testing / proxies; defaults to Resend's real endpoint.
+    apiUrl: process.env.RESEND_API_URL || 'https://api.resend.com/emails',
+  },
 };
 
 // Warn loudly if the JWT secret is left at its insecure default in production.

@@ -147,6 +147,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `JWT_SECRET` | ✅ | Long random string used to sign login tokens. |
 | `JWT_EXPIRES_IN` | – | Session lifetime (default `7d`). |
 | `CREDENTIAL_SECRET` | – | Key used to encrypt stored Gmail App Passwords at rest. Falls back to `JWT_SECRET`; set a dedicated value in production. |
+| `RESEND_API_KEY` | – | Enables sending notification emails via [Resend](https://resend.com)'s HTTPS API. Recommended when the host blocks outbound SMTP; takes priority over `SMTP_*`. |
 | `DEFAULT_OWNER_PIN` | – | PIN assigned to each new account (default `123456`). |
 | `ADMIN_PASSWORD` | – | Password for the app-wide Super Admin panel at `/admin` (default `0703`). Change this before deploying publicly. |
 | `DATABASE_PATH` | – | Local SQLite file path used in dev when no Turso URL is set (default `./data/inventory.sqlite`). |
@@ -158,6 +159,15 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 If SMTP is left blank, notification emails are **logged to the server console**
 instead of being sent — handy for local development.
+
+**Email over HTTPS (Resend) — recommended for hosts that block SMTP.** Many
+free hosting tiers (e.g. Render free) block outbound SMTP, so Gmail/SMTP can't
+connect. Set **`RESEND_API_KEY`** (from a free [Resend](https://resend.com)
+account) and notifications are sent through Resend's HTTPS API (port 443, never
+blocked) instead. When set, Resend is used for all accounts and takes priority
+over SMTP. Until you verify a sending domain in Resend, its test sender only
+delivers to your own Resend account email — verify a domain to send to any
+address. Use the **Send test email** button in Settings to confirm delivery.
 
 **Per-account Gmail (no server SMTP needed):** each store owner can instead add
 their own Gmail address + a [Gmail **App Password**](https://myaccount.google.com/apppasswords)

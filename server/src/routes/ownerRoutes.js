@@ -14,7 +14,12 @@ import { ScanModel } from '../models/scanModel.js';
 import { StockModel } from '../models/stockModel.js';
 import { SettingsModel } from '../models/settingsModel.js';
 import { parseInventoryFile } from '../services/importService.js';
-import { invalidateGmailTransporter, sendTestEmail, describeSmtpError } from '../services/emailService.js';
+import {
+  invalidateGmailTransporter,
+  sendTestEmail,
+  describeSmtpError,
+  serverEmailReady,
+} from '../services/emailService.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireOwner, issueOwnerToken } from '../middleware/ownerPin.js';
 import { uploadSpreadsheet } from '../middleware/upload.js';
@@ -189,11 +194,16 @@ router.delete(
 
 // ── Settings ────────────────────────────────────────────────────────────────
 
-// GET /api/owner/settings — current settings (no PIN hash).
+// GET /api/owner/settings — current settings (no PIN hash). `serverEmailReady`
+// tells the client whether email works without per-account Gmail (i.e. the
+// server has Resend or a global SMTP configured).
 router.get(
   '/settings',
   asyncHandler(async (req, res) => {
-    res.json({ settings: SettingsModel.toPublic(await SettingsModel.get(req.user.id)) });
+    res.json({
+      settings: SettingsModel.toPublic(await SettingsModel.get(req.user.id)),
+      serverEmailReady: serverEmailReady(),
+    });
   })
 );
 
@@ -259,14 +269,19 @@ router.post(
     const userId = req.user.id;
     const settings = await SettingsModel.get(userId);
     const smtp = await SettingsModel.getSmtpCredentials(userId);
-    if (!smtp) {
-      throw ApiError.badRequest('Add and save your Gmail address and App Password first, then test.');
+    // Need *some* transport: the server's own (Resend/SMTP) or the account's Gmail.
+    if (!smtp && !serverEmailReady()) {
+      throw ApiError.badRequest(
+        'No email sender is set up. Add and save a Gmail App Password above, or set RESEND_API_KEY on the server.'
+      );
     }
-    try {
-      await sendTestEmail({ to: settings.notification_email, smtp });
-    } catch (err) {
-      console.error('[smtp:test] send failed:', err.message);
-      throw ApiError.badRequest(describeSmtpError(err));
+    const result = await sendTestEmail({ to: settings.notification_email, smtp })
+      .catch((err) => {
+        console.error('[smtp:test] send failed:', err.message);
+        throw ApiError.badRequest(describeSmtpError(err));
+      });
+    if (result?.simulated) {
+      throw ApiError.badRequest('No email sender is configured on the server, so nothing was sent.');
     }
     res.json({
       message: `Test email sent to ${settings.notification_email}. Check your inbox (and spam folder).`,
