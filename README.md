@@ -147,7 +147,9 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `JWT_SECRET` | ✅ | Long random string used to sign login tokens. |
 | `JWT_EXPIRES_IN` | – | Session lifetime (default `7d`). |
 | `CREDENTIAL_SECRET` | – | Key used to encrypt stored Gmail App Passwords at rest. Falls back to `JWT_SECRET`; set a dedicated value in production. |
-| `RESEND_API_KEY` | – | Enables sending notification emails via [Resend](https://resend.com)'s HTTPS API. Recommended when the host blocks outbound SMTP; takes priority over `SMTP_*`. |
+| `BREVO_API_KEY` | – | Enables notification emails via [Brevo](https://brevo.com)'s HTTPS API — the easiest way to email any recipient on an SMTP-blocked host (verify one sender, no domain). Requires `MAIL_FROM` set to the verified sender. |
+| `RESEND_API_KEY` | – | Enables sending notification emails via [Resend](https://resend.com)'s HTTPS API. Needs a verified domain to reach arbitrary recipients. |
+| `EMAIL_PROVIDER` | – | Which transport to prefer when several are set: `brevo`, `resend`, `smtp`, or `auto` (default). |
 | `DEFAULT_OWNER_PIN` | – | PIN assigned to each new account (default `123456`). |
 | `ADMIN_PASSWORD` | – | Password for the app-wide Super Admin panel at `/admin` (default `0703`). Change this before deploying publicly. |
 | `DATABASE_PATH` | – | Local SQLite file path used in dev when no Turso URL is set (default `./data/inventory.sqlite`). |
@@ -160,14 +162,23 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 If SMTP is left blank, notification emails are **logged to the server console**
 instead of being sent — handy for local development.
 
-**Email over HTTPS (Resend) — recommended for hosts that block SMTP.** Many
-free hosting tiers (e.g. Render free) block outbound SMTP, so Gmail/SMTP can't
-connect. Set **`RESEND_API_KEY`** (from a free [Resend](https://resend.com)
-account) and notifications are sent through Resend's HTTPS API (port 443, never
-blocked) instead. When set, Resend is used for all accounts and takes priority
-over SMTP. Until you verify a sending domain in Resend, its test sender only
-delivers to your own Resend account email — verify a domain to send to any
-address. Use the **Send test email** button in Settings to confirm delivery.
+**Email over HTTPS — recommended for hosts that block SMTP.** Many free hosting
+tiers (e.g. Render free) block outbound SMTP, so Gmail/SMTP can't connect. Use
+an HTTP email API instead (port 443, never blocked); it's used for all accounts
+and takes priority over SMTP.
+
+- **[Brevo](https://brevo.com) — send to any recipient, no domain needed.**
+  Verify a single sender email (Senders, Domains & Dedicated IPs → **Senders**),
+  create an API key, then set **`BREVO_API_KEY`** and **`MAIL_FROM`** to that
+  exact verified sender (e.g. `Inventory Tracker <you@gmail.com>`). This is the
+  simplest way to email various store owners.
+- **[Resend](https://resend.com) — alternative.** Set **`RESEND_API_KEY`**. To
+  send to arbitrary addresses you must verify a sending domain; until then its
+  test sender only delivers to your own Resend account email.
+
+If more than one is configured, set `EMAIL_PROVIDER` (`brevo` | `resend` |
+`smtp`) to choose; the default `auto` prefers Resend, then Brevo, then SMTP.
+Use the **Send test email** button in Settings to confirm delivery.
 
 **Per-account Gmail (no server SMTP needed):** each store owner can instead add
 their own Gmail address + a [Gmail **App Password**](https://myaccount.google.com/apppasswords)

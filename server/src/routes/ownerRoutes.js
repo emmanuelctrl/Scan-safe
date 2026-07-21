@@ -272,7 +272,7 @@ router.post(
     // Need *some* transport: the server's own (Resend/SMTP) or the account's Gmail.
     if (!smtp && !serverEmailReady()) {
       throw ApiError.badRequest(
-        'No email sender is set up. Add and save a Gmail App Password above, or set RESEND_API_KEY on the server.'
+        'No email sender is set up. Add and save a Gmail App Password above, or set BREVO_API_KEY / RESEND_API_KEY on the server.'
       );
     }
     const result = await sendTestEmail({ to: settings.notification_email, smtp })

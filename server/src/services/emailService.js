@@ -49,14 +49,38 @@ export function invalidateGmailTransporter(user) {
   }
 }
 
+// Brevo needs a verified sender email; it's only usable with MAIL_FROM set.
+const hasResend = Boolean(config.resend.apiKey);
+const hasBrevo = Boolean(config.brevo.apiKey && config.mailFrom);
+
 /**
  * True when the server itself can send email without any per-account setup —
- * i.e. Resend or a global SMTP transporter is configured. The client uses this
- * to know notifications will work even if the owner hasn't added a Gmail App
- * Password.
+ * i.e. Resend, Brevo, or a global SMTP transporter is configured. The client
+ * uses this to know notifications will work even without a Gmail App Password.
  */
 export function serverEmailReady() {
-  return Boolean(config.resend.apiKey || globalTransporter);
+  return Boolean(hasResend || hasBrevo || globalTransporter);
+}
+
+/** Which transport a given send should use, honouring EMAIL_PROVIDER. */
+function chooseProvider() {
+  const pref = config.emailProvider;
+  if (pref === 'resend' && hasResend) return 'resend';
+  if (pref === 'brevo' && hasBrevo) return 'brevo';
+  if (pref === 'smtp') return 'smtp';
+  // auto (or a preferred provider that isn't configured): first available.
+  if (hasResend) return 'resend';
+  if (hasBrevo) return 'brevo';
+  return 'smtp';
+}
+
+/** Parse a "Name <email>" (or bare "email") string into { name, email }. */
+function parseFrom(str) {
+  const m = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(str || '');
+  if (m) {
+    return { name: m[1].replace(/^"|"$/g, '').trim() || 'Inventory Tracker', email: m[2].trim() };
+  }
+  return { name: 'Inventory Tracker', email: (str || '').trim() };
 }
 
 /** Send one email via Resend's HTTPS API (works on hosts that block SMTP). */
@@ -90,17 +114,59 @@ async function sendViaResend({ to, subject, text, html }) {
   }
 }
 
+/** Send one email via Brevo's HTTPS API (single verified sender → any recipient). */
+async function sendViaBrevo({ to, subject, text, html }) {
+  let res;
+  try {
+    res = await fetch(config.brevo.apiUrl, {
+      method: 'POST',
+      headers: {
+        'api-key': config.brevo.apiKey,
+        'Content-Type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: parseFrom(config.mailFrom),
+        to: [{ email: to }],
+        subject,
+        htmlContent: html || `<pre>${text}</pre>`,
+        textContent: text,
+      }),
+    });
+  } catch (netErr) {
+    const err = new Error(`Could not reach the Brevo API: ${netErr.message}`);
+    err.code = 'EBREVO';
+    err.status = 0;
+    err.detail = netErr.message;
+    throw err;
+  }
+  if (!res.ok) {
+    let detail = '';
+    try { detail = JSON.stringify(await res.json()); }
+    catch { detail = await res.text().catch(() => ''); }
+    const err = new Error(`Brevo ${res.status}: ${detail}`);
+    err.code = 'EBREVO';
+    err.status = res.status;
+    err.detail = detail;
+    throw err;
+  }
+}
+
 /**
- * Deliver an email through the best available transport, in priority order:
- *   1. Resend HTTP API   — works even where outbound SMTP is blocked
- *   2. the account's own Gmail (App Password)
- *   3. a global SMTP transporter (SMTP_* env vars)
- *   4. console log        — dev fallback when nothing is configured
+ * Deliver an email through the best available transport, in priority order
+ * (see chooseProvider): Resend or Brevo (HTTP APIs that work where SMTP is
+ * blocked), else the account's own Gmail / a global SMTP transporter, else a
+ * console-log dev fallback.
  */
 async function deliver({ to, subject, text, html, smtp }) {
-  if (config.resend.apiKey) {
+  const provider = chooseProvider();
+  if (provider === 'resend') {
     await sendViaResend({ to, subject, text, html });
     return { delivered: true, via: 'resend' };
+  }
+  if (provider === 'brevo') {
+    await sendViaBrevo({ to, subject, text, html });
+    return { delivered: true, via: 'brevo' };
   }
 
   const transporter = smtp ? getGmailTransporter(smtp) : globalTransporter;
@@ -125,6 +191,19 @@ async function deliver({ to, subject, text, html, smtp }) {
 export function describeSmtpError(err) {
   const code = err?.code;
   const resp = err?.response || err?.message || '';
+  // Brevo (HTTP API) errors.
+  if (code === 'EBREVO') {
+    if (err.status === 0) {
+      return "Couldn't reach the Brevo email API. Check the server's network access to api.brevo.com.";
+    }
+    if (err.status === 401) {
+      return 'Your Brevo API key was rejected. Check BREVO_API_KEY on the server.';
+    }
+    if (/sender|not valid|not been validated|activate/i.test(err.detail || '')) {
+      return 'Brevo rejected the sender. In Brevo, add and verify your MAIL_FROM address under Senders, Domains & Dedicated IPs → Senders, then try again.';
+    }
+    return `Email API error: ${err.detail || err.message}`;
+  }
   // Resend (HTTP API) errors.
   if (code === 'ERESEND') {
     if (err.status === 0) {
