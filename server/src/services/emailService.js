@@ -6,15 +6,47 @@
 import nodemailer from 'nodemailer';
 import config from '../config/env.js';
 
-let transporter = null;
+// Optional app-wide transporter from SMTP_* env vars. Used only when an
+// account hasn't supplied its own Gmail credentials.
+let globalTransporter = null;
 
 if (config.smtp.host && config.smtp.user) {
-  transporter = nodemailer.createTransport({
+  globalTransporter = nodemailer.createTransport({
     host: config.smtp.host,
     port: config.smtp.port,
     secure: config.smtp.secure, // true for 465, false for 587/STARTTLS
     auth: { user: config.smtp.user, pass: config.smtp.pass },
   });
+}
+
+// Cache per-account Gmail transporters keyed by the sender address so we don't
+// rebuild a connection pool on every scan.
+const gmailTransporters = new Map();
+
+function getGmailTransporter({ user, pass }) {
+  const cached = gmailTransporters.get(user);
+  if (cached) return cached;
+  const t = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+    // Fail fast on a bad/unreachable config so a checkout can't hang on it.
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
+  });
+  gmailTransporters.set(user, t);
+  return t;
+}
+
+/** Forget a cached transporter when its credentials change or are removed. */
+export function invalidateGmailTransporter(user) {
+  const t = gmailTransporters.get(user);
+  if (t) {
+    try { t.close(); } catch { /* ignore */ }
+    gmailTransporters.delete(user);
+  }
 }
 
 /**
@@ -25,8 +57,9 @@ if (config.smtp.host && config.smtp.user) {
  * @param {string} params.action      'scan' | 'checkout'
  * @param {number} params.quantity    Units affected.
  * @param {string} [params.worker]    Email of the worker who scanned.
+ * @param {{user:string, pass:string}} [params.smtp]  Per-account Gmail sender.
  */
-export async function sendScanNotification({ to, item, action, quantity, worker }) {
+export async function sendScanNotification({ to, item, action, quantity, worker, smtp }) {
   const verb = action === 'checkout' ? 'checked out' : 'scanned';
   const when = new Date().toLocaleString();
   const subject = `🛍️ Inventory Tracker: "${item.name}" ${verb}`;
@@ -61,22 +94,20 @@ export async function sendScanNotification({ to, item, action, quantity, worker 
       </p>
     </div>`;
 
-  // Fall back to console logging when SMTP isn't configured.
+  // Prefer the account's own Gmail sender; otherwise the app-wide transporter.
+  const transporter = smtp ? getGmailTransporter(smtp) : globalTransporter;
+  const from = smtp ? `Inventory Tracker <${smtp.user}>` : config.smtp.from;
+
+  // Fall back to console logging when no transporter is available at all.
   if (!transporter) {
-    console.log('\n[email:dev] SMTP not configured — notification not sent.');
+    console.log('\n[email:dev] No email sender configured — notification not sent.');
     console.log(`[email:dev] To: ${to}`);
     console.log(`[email:dev] Subject: ${subject}`);
     console.log(`[email:dev]\n${text}`);
     return { delivered: false, simulated: true };
   }
 
-  await transporter.sendMail({
-    from: config.smtp.from,
-    to,
-    subject,
-    text,
-    html,
-  });
+  await transporter.sendMail({ from, to, subject, text, html });
   return { delivered: true, simulated: false };
 }
 

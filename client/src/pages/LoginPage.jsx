@@ -12,7 +12,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const [mode, setMode] = useState('login'); // 'login' | 'register'
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({
+    name: '', email: '', password: '', smtpUser: '', smtpPass: '',
+  });
   const [error, setError] = useState(null);
 
   const update = (field) => (e) =>
@@ -25,10 +27,15 @@ export default function LoginPage() {
       if (mode === 'login') {
         await login(form.email, form.password);
       } else {
+        const smtpUser = form.smtpUser.trim();
+        const smtpPass = form.smtpPass.trim();
         await register({
           email: form.email,
           password: form.password,
           name: form.name || undefined,
+          // Only sent if the owner filled both fields in.
+          smtpUser: smtpUser || undefined,
+          smtpPass: smtpPass || undefined,
         });
       }
       navigate('/worker');
@@ -116,6 +123,44 @@ export default function LoginPage() {
               autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
             />
           </label>
+
+          {mode === 'register' && (
+            <div className="auth__section">
+              <div className="auth__section-head">
+                <span>🔔 {t('notifSetupTitle')} <span className="muted">({t('optional')})</span></span>
+              </div>
+              <p className="muted auth__note">
+                {t('notifSetupHelp')}{' '}
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t('notifSetupLink')}
+                </a>
+              </p>
+              <label className="field">
+                <span>{t('gmailAddress')}</span>
+                <input
+                  type="email"
+                  value={form.smtpUser}
+                  onChange={update('smtpUser')}
+                  placeholder="you@gmail.com"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="field">
+                <span>{t('gmailAppPassword')}</span>
+                <input
+                  type="password"
+                  value={form.smtpPass}
+                  onChange={update('smtpPass')}
+                  placeholder="abcd efgh ijkl mnop"
+                  autoComplete="off"
+                />
+              </label>
+            </div>
+          )}
 
           {error && <p className="form__error">{error}</p>}
 

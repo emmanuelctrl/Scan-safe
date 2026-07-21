@@ -10,13 +10,28 @@ const pin = z
   .string()
   .regex(/^\d{6}$/, 'PIN must be exactly 6 digits.');
 
-export const registerSchema = z.object({
-  email,
-  password,
-  name: z.string().trim().max(80).optional(),
-  // Allow registering an owner account, but workers by default.
-  role: z.enum(['worker', 'owner']).optional(),
-});
+// A Gmail App Password: 16 characters, usually displayed in four space-separated
+// groups ("abcd efgh ijkl mnop"). We accept it with or without the spaces.
+const gmailAppPassword = z
+  .string()
+  .transform((v) => v.replace(/\s+/g, ''))
+  .refine((v) => /^[A-Za-z]{16}$/.test(v), 'A Gmail App Password is 16 letters.');
+
+export const registerSchema = z
+  .object({
+    email,
+    password,
+    name: z.string().trim().max(80).optional(),
+    // Allow registering an owner account, but workers by default.
+    role: z.enum(['worker', 'owner']).optional(),
+    // Optional Gmail notification sender. Both fields go together.
+    smtpUser: email.optional(),
+    smtpPass: gmailAppPassword.optional(),
+  })
+  .refine((d) => Boolean(d.smtpUser) === Boolean(d.smtpPass), {
+    message: 'Provide both a Gmail address and its App Password, or neither.',
+    path: ['smtpPass'],
+  });
 
 export const loginSchema = z.object({
   email,
@@ -51,6 +66,11 @@ export const changePinSchema = z.object({
 export const notificationEmailSchema = z.object({ email });
 
 export const themeSchema = z.object({ theme: z.enum(['light', 'dark']) });
+
+export const smtpCredentialsSchema = z.object({
+  smtpUser: email,
+  smtpPass: gmailAppPassword,
+});
 
 export const adminLoginSchema = z.object({
   password: z.string().min(1, 'Password is required.'),

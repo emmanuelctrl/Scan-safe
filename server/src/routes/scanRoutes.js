@@ -52,6 +52,7 @@ router.post(
 
     // Notify the owner. Email failures must NOT fail the scan, so we catch them.
     const settings = await SettingsModel.get(userId);
+    const smtp = await SettingsModel.getSmtpCredentials(userId);
     let notification = { delivered: false };
     try {
       notification = await sendScanNotification({
@@ -60,6 +61,7 @@ router.post(
         action,
         quantity,
         worker: req.user.email,
+        smtp, // per-account Gmail sender, or null to use the global/dev sender
       });
     } catch (err) {
       console.error('[scan] Failed to send owner notification:', err.message);
