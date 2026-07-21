@@ -14,6 +14,7 @@ export default function SettingsTab() {
   const [pinForm, setPinForm] = useState({ currentPin: '', newPin: '', confirmPin: '' });
   const [emailForm, setEmailForm] = useState({ email: '' });
   const [smtpForm, setSmtpForm] = useState({ smtpUser: '', smtpPass: '' });
+  const [serverEmailReady, setServerEmailReady] = useState(false);
   const [pinMsg, setPinMsg] = useState(null);
   const [emailMsg, setEmailMsg] = useState(null);
   const [smtpMsg, setSmtpMsg] = useState(null);
@@ -22,6 +23,7 @@ export default function SettingsTab() {
     api('/api/owner/settings', { owner: true })
       .then((d) => {
         setSettings(d.settings);
+        setServerEmailReady(Boolean(d.serverEmailReady));
         setEmailForm({ email: d.settings.notification_email });
         setSmtpForm({ smtpUser: d.settings.smtp_user || '', smtpPass: '' });
         // Keep the UI theme in sync with the stored account preference.
@@ -30,6 +32,9 @@ export default function SettingsTab() {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Email works if the server can send (Resend/SMTP) or the owner added Gmail.
+  const canSendEmail = serverEmailReady || settings?.smtp_configured;
 
   async function changePin(e) {
     e.preventDefault();
@@ -168,16 +173,32 @@ export default function SettingsTab() {
         </section>
       </div>
 
-      {/* Gmail checkout notifications */}
+      {/* Checkout email notifications */}
       <section className="card">
         <div className="card__head">
           <h3>🔔 {t('notifSetupTitle')}</h3>
-          {settings?.smtp_configured && (
+          {canSendEmail && (
             <span className="badge badge--success">{t('notifOn')}</span>
           )}
         </div>
-        <p className="muted">
-          {t('notifSetupHelp')}{' '}
+
+        {serverEmailReady && (
+          <p className="status status--success">{t('notifServerReady')}</p>
+        )}
+
+        {serverEmailReady && (
+          <div className="row-actions" style={{ margin: '0.5rem 0 0.25rem' }}>
+            <button type="button" className="btn btn--primary" onClick={testSmtp}>
+              {t('notifTest')}
+            </button>
+          </div>
+        )}
+        {serverEmailReady && smtpMsg && (
+          <p className={`status status--${smtpMsg.type}`}>{smtpMsg.message}</p>
+        )}
+
+        <p className="muted" style={{ marginTop: serverEmailReady ? '1rem' : 0 }}>
+          {serverEmailReady ? t('notifGmailOptional') : t('notifSetupHelp')}{' '}
           <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">
             {t('notifSetupLink')}
           </a>
@@ -196,10 +217,12 @@ export default function SettingsTab() {
               placeholder={settings?.smtp_configured ? '•••• •••• •••• ••••' : 'abcd efgh ijkl mnop'}
               autoComplete="off" />
           </label>
-          {smtpMsg && <p className={`status status--${smtpMsg.type}`}>{smtpMsg.message}</p>}
+          {!serverEmailReady && smtpMsg && (
+            <p className={`status status--${smtpMsg.type}`}>{smtpMsg.message}</p>
+          )}
           <div className="row-actions">
             <button className="btn btn--primary">{t('notifSave')}</button>
-            {settings?.smtp_configured && (
+            {settings?.smtp_configured && !serverEmailReady && (
               <button type="button" className="btn btn--secondary" onClick={testSmtp}>
                 {t('notifTest')}
               </button>

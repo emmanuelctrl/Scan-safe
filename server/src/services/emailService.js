@@ -50,17 +50,99 @@ export function invalidateGmailTransporter(user) {
 }
 
 /**
+ * True when the server itself can send email without any per-account setup —
+ * i.e. Resend or a global SMTP transporter is configured. The client uses this
+ * to know notifications will work even if the owner hasn't added a Gmail App
+ * Password.
+ */
+export function serverEmailReady() {
+  return Boolean(config.resend.apiKey || globalTransporter);
+}
+
+/** Send one email via Resend's HTTPS API (works on hosts that block SMTP). */
+async function sendViaResend({ to, subject, text, html }) {
+  let res;
+  try {
+    res = await fetch(config.resend.apiUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.resend.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from: config.resend.from, to, subject, text, html }),
+    });
+  } catch (netErr) {
+    const err = new Error(`Could not reach the Resend API: ${netErr.message}`);
+    err.code = 'ERESEND';
+    err.status = 0;
+    err.detail = netErr.message;
+    throw err;
+  }
+  if (!res.ok) {
+    let detail = '';
+    try { detail = JSON.stringify(await res.json()); }
+    catch { detail = await res.text().catch(() => ''); }
+    const err = new Error(`Resend ${res.status}: ${detail}`);
+    err.code = 'ERESEND';
+    err.status = res.status;
+    err.detail = detail;
+    throw err;
+  }
+}
+
+/**
+ * Deliver an email through the best available transport, in priority order:
+ *   1. Resend HTTP API   — works even where outbound SMTP is blocked
+ *   2. the account's own Gmail (App Password)
+ *   3. a global SMTP transporter (SMTP_* env vars)
+ *   4. console log        — dev fallback when nothing is configured
+ */
+async function deliver({ to, subject, text, html, smtp }) {
+  if (config.resend.apiKey) {
+    await sendViaResend({ to, subject, text, html });
+    return { delivered: true, via: 'resend' };
+  }
+
+  const transporter = smtp ? getGmailTransporter(smtp) : globalTransporter;
+  const from = smtp ? `Inventory Tracker <${smtp.user}>` : config.smtp.from;
+
+  if (!transporter) {
+    console.log('\n[email:dev] No email sender configured — notification not sent.');
+    console.log(`[email:dev] To: ${to}`);
+    console.log(`[email:dev] Subject: ${subject}`);
+    console.log(`[email:dev]\n${text}`);
+    return { delivered: false, simulated: true };
+  }
+
+  await transporter.sendMail({ from, to, subject, text, html });
+  return { delivered: true, via: smtp ? 'gmail' : 'smtp' };
+}
+
+/**
  * Turn a raw nodemailer/SMTP error into a short, actionable message an owner
  * can act on, instead of a cryptic stack trace.
  */
 export function describeSmtpError(err) {
   const code = err?.code;
   const resp = err?.response || err?.message || '';
+  // Resend (HTTP API) errors.
+  if (code === 'ERESEND') {
+    if (err.status === 0) {
+      return "Couldn't reach the Resend email API. Check the server's network access to api.resend.com.";
+    }
+    if (err.status === 401 || err.status === 403) {
+      return 'Your Resend API key was rejected. Check RESEND_API_KEY on the server.';
+    }
+    if (err.status === 422 || /domain|not verified|only send testing|testing emails/i.test(err.detail || '')) {
+      return 'Resend accepted the request but not this recipient. While your domain is unverified, Resend only delivers to your own Resend account email — verify a domain in Resend to send to any address.';
+    }
+    return `Email API error: ${err.detail || err.message}`;
+  }
   if (code === 'EAUTH' || /5\.7\.8|Username and Password not accepted|BadCredentials/i.test(resp)) {
     return 'Gmail did not accept the address or App Password. Turn on 2-Step Verification on that Google account and use a 16-character App Password (not your normal password).';
   }
   if (['ETIMEDOUT', 'ESOCKET', 'ECONNECTION', 'ECONNREFUSED', 'EDNS'].includes(code)) {
-    return "Couldn't reach Gmail's mail server on port 465. The host running this app may block outbound SMTP (common on free hosting) — try a host that allows it, or run locally.";
+    return "Couldn't reach Gmail's mail server on port 465. The host running this app may block outbound SMTP (common on free hosting) — set RESEND_API_KEY to send over HTTPS instead, or use a host that allows SMTP.";
   }
   return err?.message || 'Unknown email error.';
 }
@@ -70,21 +152,15 @@ export function describeSmtpError(err) {
  * Throws the raw error on failure so the caller can describe it.
  */
 export async function sendTestEmail({ to, smtp }) {
-  const transporter = smtp ? getGmailTransporter(smtp) : globalTransporter;
-  const from = smtp ? `Inventory Tracker <${smtp.user}>` : config.smtp.from;
-  if (!transporter) {
-    return { delivered: false, simulated: true };
-  }
-  await transporter.sendMail({
-    from,
+  return deliver({
     to,
+    smtp,
     subject: '✅ Inventory Tracker — test email',
     text:
       'This is a test from Inventory Tracker.\n\n' +
       'If you can read this, your checkout notifications are set up correctly — ' +
       'every checkout will now email this address.',
   });
-  return { delivered: true };
 }
 
 /**
@@ -148,21 +224,7 @@ export async function sendScanNotification({
       </p>
     </div>`;
 
-  // Prefer the account's own Gmail sender; otherwise the app-wide transporter.
-  const transporter = smtp ? getGmailTransporter(smtp) : globalTransporter;
-  const from = smtp ? `Inventory Tracker <${smtp.user}>` : config.smtp.from;
-
-  // Fall back to console logging when no transporter is available at all.
-  if (!transporter) {
-    console.log('\n[email:dev] No email sender configured — notification not sent.');
-    console.log(`[email:dev] To: ${to}`);
-    console.log(`[email:dev] Subject: ${subject}`);
-    console.log(`[email:dev]\n${text}`);
-    return { delivered: false, simulated: true };
-  }
-
-  await transporter.sendMail({ from, to, subject, text, html });
-  return { delivered: true, simulated: false };
+  return deliver({ to, subject, text, html, smtp });
 }
 
 function row(label, value) {
