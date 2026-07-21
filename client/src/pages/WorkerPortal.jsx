@@ -61,10 +61,20 @@ export default function WorkerPortal() {
     <div className="page">
       <Navbar />
       <main className="container">
-        <div className="page__head">
-          <h1>{t('workerPortal')}</h1>
-          <p className="muted">{t('workerIntro')}</p>
-        </div>
+        <section className="hero">
+          <div className="hero__text">
+            <h2 className="hero__title">{t('heroTitle')}</h2>
+            <p className="hero__sub">{t('heroSub')}</p>
+            <button
+              className="btn hero__cta"
+              onClick={() => setScanning(true)}
+              disabled={scanning}
+            >
+              {t('heroCta')}
+            </button>
+          </div>
+          <div className="hero__art" aria-hidden="true">🛍️</div>
+        </section>
 
         <div className="grid grid--2">
           <section className="card">

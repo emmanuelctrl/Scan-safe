@@ -41,6 +41,9 @@ export const translations = {
     workerPortal: 'Worker Portal',
     workerIntro:
       "Scan an item's barcode or QR code to check it out. The owner is notified automatically.",
+    heroTitle: 'Your store, one scan away',
+    heroSub: "Scan an item's barcode to check it out — the owner is notified instantly.",
+    heroCta: 'Start scanning',
     scanner: 'Scanner',
     startCamera: 'Start camera',
     stopCamera: 'Stop camera',
@@ -222,6 +225,9 @@ export const translations = {
     workerPortal: 'የሠራተኛ ገጽ',
     workerIntro:
       'ዕቃ ለመሸጥ ባርኮዱን ወይም QR ኮዱን ይቃኙ። ባለቤቱ በራስ-ሰር ማሳወቂያ ይደርሰዋል።',
+    heroTitle: 'ሱቅዎ፣ በአንድ ቅኝት',
+    heroSub: 'ዕቃን ለመሸጥ ባርኮዱን ይቃኙ — ባለቤቱ ወዲያውኑ ማሳወቂያ ይደርሰዋል።',
+    heroCta: 'መቃኘት ጀምር',
     scanner: 'መቃኛ',
     startCamera: 'ካሜራ አስጀምር',
     stopCamera: 'ካሜራ አቁም',

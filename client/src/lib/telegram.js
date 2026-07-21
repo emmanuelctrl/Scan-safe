@@ -40,8 +40,8 @@ function applyViewportHeight(tg) {
 export function syncTelegramThemeColors(theme) {
   const tg = getTelegramWebApp();
   if (!tg) return;
-  const bg = theme === 'dark' ? '#0b0d14' : '#f3f5f9';
-  const header = theme === 'dark' ? '#151823' : '#ffffff';
+  const bg = theme === 'dark' ? '#08110f' : '#eef0eb';
+  const header = theme === 'dark' ? '#101b18' : '#ffffff';
   try {
     tg.setBackgroundColor?.(bg);
     tg.setHeaderColor?.(header);
