@@ -75,16 +75,30 @@ const config = {
     from: process.env.MAIL_FROM || 'Inventory Tracker <no-reply@example.com>',
   },
 
-  // Resend (https://resend.com) — an HTTP email API that sends over HTTPS, so
-  // it works even on hosts that block outbound SMTP (Render free tier, etc.).
-  // Set RESEND_API_KEY to enable it; it then takes priority over SMTP.
+  // The address notifications are sent "from". For Brevo this MUST be an email
+  // you've verified as a sender; for Resend it must be on a verified domain.
+  mailFrom: process.env.MAIL_FROM || '',
+
+  // Which email transport to use when more than one is configured.
+  // 'auto' (default) picks the first available: Resend → Brevo → SMTP.
+  emailProvider: (process.env.EMAIL_PROVIDER || 'auto').toLowerCase(),
+
+  // Resend (https://resend.com) — HTTP email API over HTTPS, so it works even
+  // on hosts that block outbound SMTP. Sends to arbitrary recipients only after
+  // you verify a sending domain (its test sender is limited to your own email).
   resend: {
     apiKey: process.env.RESEND_API_KEY || '',
-    // Until you verify your own domain in Resend, its test sender
-    // `onboarding@resend.dev` only delivers to your Resend account's email.
     from: process.env.MAIL_FROM || 'Inventory Tracker <onboarding@resend.dev>',
-    // Overridable for testing / proxies; defaults to Resend's real endpoint.
     apiUrl: process.env.RESEND_API_URL || 'https://api.resend.com/emails',
+  },
+
+  // Brevo (https://brevo.com) — HTTP email API over HTTPS. Unlike Resend it can
+  // send to any recipient after verifying just a SINGLE sender email (no domain
+  // needed), so it's the simplest way to email various store owners. Requires
+  // BREVO_API_KEY + MAIL_FROM set to your verified sender address.
+  brevo: {
+    apiKey: process.env.BREVO_API_KEY || '',
+    apiUrl: process.env.BREVO_API_URL || 'https://api.brevo.com/v3/smtp/email',
   },
 };
 

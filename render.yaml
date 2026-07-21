@@ -37,8 +37,12 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
-      # Recommended on Render: the free plan blocks outbound SMTP, so use
-      # Resend (HTTPS email API) instead. Get a key at https://resend.com and
-      # paste it here after the first deploy.
+      # Recommended on Render: the free plan blocks outbound SMTP, so use an
+      # HTTPS email API instead. Brevo can email ANY recipient after verifying
+      # just one sender address (no domain needed) — set BREVO_API_KEY and set
+      # MAIL_FROM to that verified sender. (Resend is an alternative but needs a
+      # verified domain for arbitrary recipients.)
+      - key: BREVO_API_KEY
+        sync: false
       - key: RESEND_API_KEY
         sync: false
