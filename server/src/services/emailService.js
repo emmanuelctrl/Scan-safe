@@ -6,15 +6,47 @@
 import nodemailer from 'nodemailer';
 import config from '../config/env.js';
 
-let transporter = null;
+// Optional app-wide transporter from SMTP_* env vars. Used only when an
+// account hasn't supplied its own Gmail credentials.
+let globalTransporter = null;
 
 if (config.smtp.host && config.smtp.user) {
-  transporter = nodemailer.createTransport({
+  globalTransporter = nodemailer.createTransport({
     host: config.smtp.host,
     port: config.smtp.port,
     secure: config.smtp.secure, // true for 465, false for 587/STARTTLS
     auth: { user: config.smtp.user, pass: config.smtp.pass },
   });
+}
+
+// Cache per-account Gmail transporters keyed by the sender address so we don't
+// rebuild a connection pool on every scan.
+const gmailTransporters = new Map();
+
+function getGmailTransporter({ user, pass }) {
+  const cached = gmailTransporters.get(user);
+  if (cached) return cached;
+  const t = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+    // Fail fast on a bad/unreachable config so a checkout can't hang on it.
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
+  });
+  gmailTransporters.set(user, t);
+  return t;
+}
+
+/** Forget a cached transporter when its credentials change or are removed. */
+export function invalidateGmailTransporter(user) {
+  const t = gmailTransporters.get(user);
+  if (t) {
+    try { t.close(); } catch { /* ignore */ }
+    gmailTransporters.delete(user);
+  }
 }
 
 /**
@@ -27,9 +59,10 @@ if (config.smtp.host && config.smtp.user) {
  * @param {number} [params.unitPrice] Price the sale was made at (worker may adjust it).
  * @param {number} [params.listPrice] The item's stored price, to flag adjustments.
  * @param {string} [params.worker]    Email of the worker who scanned.
+ * @param {{user:string, pass:string}} [params.smtp]  Per-account Gmail sender.
  */
 export async function sendScanNotification({
-  to, item, action, quantity, unitPrice, listPrice, worker,
+  to, item, action, quantity, unitPrice, listPrice, worker, smtp,
 }) {
   const verb = action === 'checkout' ? 'checked out' : 'scanned';
   const when = new Date().toLocaleString();
@@ -77,60 +110,20 @@ export async function sendScanNotification({
       </p>
     </div>`;
 
-  // Fall back to console logging when SMTP isn't configured.
+  // Prefer the account's own Gmail sender; otherwise the app-wide transporter.
+  const transporter = smtp ? getGmailTransporter(smtp) : globalTransporter;
+  const from = smtp ? `Inventory Tracker <${smtp.user}>` : config.smtp.from;
+
+  // Fall back to console logging when no transporter is available at all.
   if (!transporter) {
-    console.log('\n[email:dev] SMTP not configured — notification not sent.');
+    console.log('\n[email:dev] No email sender configured — notification not sent.');
     console.log(`[email:dev] To: ${to}`);
     console.log(`[email:dev] Subject: ${subject}`);
     console.log(`[email:dev]\n${text}`);
     return { delivered: false, simulated: true };
   }
 
-  await transporter.sendMail({
-    from: config.smtp.from,
-    to,
-    subject,
-    text,
-    html,
-  });
-  return { delivered: true, simulated: false };
-}
-
-/**
- * Send the 6-digit email verification code for a new account.
- * Falls back to console logging when SMTP isn't configured (dev).
- */
-export async function sendVerificationEmail({ to, code }) {
-  const subject = '🛍️ Inventory Tracker: your verification code';
-  const text =
-    `Welcome to Inventory Tracker!\n\n` +
-    `Your verification code is: ${code}\n\n` +
-    `Enter it on the sign-in page to activate your account. ` +
-    `The code expires in 15 minutes.\n\n` +
-    `If you didn't create an account, you can ignore this email.`;
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: auto;">
-      <h2 style="color:#4f46e5;">🛍️ Inventory Tracker</h2>
-      <p>Welcome! Enter this code on the sign-in page to activate your account:</p>
-      <p style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#111827;
-                background:#f0f1f6;border-radius:10px;padding:14px 0;text-align:center;">
-        ${code}
-      </p>
-      <p style="color:#6b7280;font-size:12px;">
-        The code expires in 15 minutes. If you didn't create an account, you can
-        ignore this email.
-      </p>
-    </div>`;
-
-  if (!transporter) {
-    console.log('\n[email:dev] SMTP not configured — verification email not sent.');
-    console.log(`[email:dev] To: ${to}`);
-    console.log(`[email:dev] Verification code: ${code}`);
-    return { delivered: false, simulated: true };
-  }
-
-  await transporter.sendMail({ from: config.smtp.from, to, subject, text, html });
+  await transporter.sendMail({ from, to, subject, text, html });
   return { delivered: true, simulated: false };
 }
 

@@ -84,15 +84,12 @@ const SCHEMA_SQL = `
   PRAGMA foreign_keys = ON;
 
   CREATE TABLE IF NOT EXISTS users (
-    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-    email                   TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    password_hash           TEXT NOT NULL,
-    name                    TEXT,
-    role                    TEXT NOT NULL DEFAULT 'worker' CHECK (role IN ('worker','owner')),
-    email_verified          INTEGER NOT NULL DEFAULT 1,
-    verification_code_hash  TEXT,
-    verification_expires_at TEXT,
-    created_at              TEXT NOT NULL DEFAULT (datetime('now'))
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    password_hash TEXT NOT NULL,
+    name          TEXT,
+    role          TEXT NOT NULL DEFAULT 'worker' CHECK (role IN ('worker','owner')),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS settings (
@@ -100,6 +97,11 @@ const SCHEMA_SQL = `
     owner_pin_hash     TEXT NOT NULL,
     notification_email TEXT NOT NULL,
     theme              TEXT NOT NULL DEFAULT 'light' CHECK (theme IN ('light','dark')),
+    -- Optional per-account Gmail sender for checkout notifications. The app
+    -- password is encrypted at rest (never hashed — SMTP auth needs the real
+    -- value) and never returned to the client.
+    smtp_user          TEXT,
+    smtp_pass_enc      TEXT,
     updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -160,20 +162,17 @@ export async function initDatabase() {
 
 /**
  * Additive migrations for databases created before newer columns existed.
- * email_verified defaults to 1 so accounts that pre-date email verification
- * keep working; new registrations explicitly insert 0.
+ * `CREATE TABLE IF NOT EXISTS` never alters an existing table, so columns
+ * added later must be applied with ALTER TABLE here.
  */
 async function migrate() {
-  const cols = await base.all(`PRAGMA table_info(users)`);
+  const cols = await base.all(`PRAGMA table_info(settings)`);
   const names = new Set(cols.map((c) => c.name));
-  if (!names.has('email_verified')) {
-    await base.run(`ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1`);
+  if (!names.has('smtp_user')) {
+    await base.run(`ALTER TABLE settings ADD COLUMN smtp_user TEXT`);
   }
-  if (!names.has('verification_code_hash')) {
-    await base.run(`ALTER TABLE users ADD COLUMN verification_code_hash TEXT`);
-  }
-  if (!names.has('verification_expires_at')) {
-    await base.run(`ALTER TABLE users ADD COLUMN verification_expires_at TEXT`);
+  if (!names.has('smtp_pass_enc')) {
+    await base.run(`ALTER TABLE settings ADD COLUMN smtp_pass_enc TEXT`);
   }
 
   const itemCols = await base.all(`PRAGMA table_info(items)`);

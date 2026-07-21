@@ -1,4 +1,4 @@
-// Authentication routes: register and login. (Email verification removed.)
+// Authentication routes: register and login.
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import config from '../config/env.js';

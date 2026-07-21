@@ -14,6 +14,7 @@ import { ScanModel } from '../models/scanModel.js';
 import { StockModel } from '../models/stockModel.js';
 import { SettingsModel } from '../models/settingsModel.js';
 import { parseInventoryFile } from '../services/importService.js';
+import { invalidateGmailTransporter } from '../services/emailService.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireOwner, issueOwnerToken } from '../middleware/ownerPin.js';
 import { uploadSpreadsheet } from '../middleware/upload.js';
@@ -25,6 +26,7 @@ import {
   notificationEmailSchema,
   themeSchema,
   stockAdjustSchema,
+  smtpCredentialsSchema,
 } from '../validators/schemas.js';
 import { validate } from '../utils/validate.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -227,6 +229,35 @@ router.put(
     const userId = req.user.id;
     const { theme } = validate(themeSchema, req.body);
     await SettingsModel.setTheme(userId, theme);
+    res.json({ settings: SettingsModel.toPublic(await SettingsModel.get(userId)) });
+  })
+);
+
+// PUT /api/owner/settings/smtp — set/replace the Gmail sender + App Password
+// used to email checkout notifications. The password is encrypted at rest and
+// never returned to the client.
+router.put(
+  '/settings/smtp',
+  asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { smtpUser, smtpPass } = validate(smtpCredentialsSchema, req.body);
+    // Drop any cached transporter for the previous address so the new
+    // credentials take effect immediately.
+    const previous = await SettingsModel.get(userId);
+    if (previous?.smtp_user) invalidateGmailTransporter(previous.smtp_user);
+    await SettingsModel.setSmtpCredentials(userId, smtpUser, smtpPass);
+    res.json({ settings: SettingsModel.toPublic(await SettingsModel.get(userId)) });
+  })
+);
+
+// DELETE /api/owner/settings/smtp — remove stored Gmail credentials.
+router.delete(
+  '/settings/smtp',
+  asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const previous = await SettingsModel.get(userId);
+    if (previous?.smtp_user) invalidateGmailTransporter(previous.smtp_user);
+    await SettingsModel.clearSmtpCredentials(userId);
     res.json({ settings: SettingsModel.toPublic(await SettingsModel.get(userId)) });
   })
 );

@@ -13,14 +13,17 @@ export default function SettingsTab() {
 
   const [pinForm, setPinForm] = useState({ currentPin: '', newPin: '', confirmPin: '' });
   const [emailForm, setEmailForm] = useState({ email: '' });
+  const [smtpForm, setSmtpForm] = useState({ smtpUser: '', smtpPass: '' });
   const [pinMsg, setPinMsg] = useState(null);
   const [emailMsg, setEmailMsg] = useState(null);
+  const [smtpMsg, setSmtpMsg] = useState(null);
 
   useEffect(() => {
     api('/api/owner/settings', { owner: true })
       .then((d) => {
         setSettings(d.settings);
         setEmailForm({ email: d.settings.notification_email });
+        setSmtpForm({ smtpUser: d.settings.smtp_user || '', smtpPass: '' });
         // Keep the UI theme in sync with the stored account preference.
         if (d.settings.theme && d.settings.theme !== theme) setTheme(d.settings.theme);
       })
@@ -61,6 +64,35 @@ export default function SettingsTab() {
       setEmailMsg({ type: 'success', message: t('emailUpdated') });
     } catch (err) {
       setEmailMsg({ type: 'error', message: err.message });
+    }
+  }
+
+  async function saveSmtp(e) {
+    e.preventDefault();
+    setSmtpMsg(null);
+    try {
+      const d = await api('/api/owner/settings/smtp', {
+        method: 'PUT',
+        owner: true,
+        body: { smtpUser: smtpForm.smtpUser.trim(), smtpPass: smtpForm.smtpPass.trim() },
+      });
+      setSettings(d.settings);
+      setSmtpForm({ smtpUser: d.settings.smtp_user || '', smtpPass: '' });
+      setSmtpMsg({ type: 'success', message: t('notifSaved') });
+    } catch (err) {
+      setSmtpMsg({ type: 'error', message: err.message });
+    }
+  }
+
+  async function removeSmtp() {
+    setSmtpMsg(null);
+    try {
+      const d = await api('/api/owner/settings/smtp', { method: 'DELETE', owner: true });
+      setSettings(d.settings);
+      setSmtpForm({ smtpUser: '', smtpPass: '' });
+      setSmtpMsg({ type: 'success', message: t('notifRemoved') });
+    } catch (err) {
+      setSmtpMsg({ type: 'error', message: err.message });
     }
   }
 
@@ -125,6 +157,46 @@ export default function SettingsTab() {
           </form>
         </section>
       </div>
+
+      {/* Gmail checkout notifications */}
+      <section className="card">
+        <div className="card__head">
+          <h3>🔔 {t('notifSetupTitle')}</h3>
+          {settings?.smtp_configured && (
+            <span className="badge badge--success">{t('notifOn')}</span>
+          )}
+        </div>
+        <p className="muted">
+          {t('notifSetupHelp')}{' '}
+          <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">
+            {t('notifSetupLink')}
+          </a>
+        </p>
+        <form onSubmit={saveSmtp} className="form">
+          <label className="field">
+            <span>{t('gmailAddress')}</span>
+            <input type="email" required value={smtpForm.smtpUser}
+              onChange={(e) => setSmtpForm({ ...smtpForm, smtpUser: e.target.value })}
+              placeholder="you@gmail.com" autoComplete="off" />
+          </label>
+          <label className="field">
+            <span>{t('gmailAppPassword')}</span>
+            <input type="password" required value={smtpForm.smtpPass}
+              onChange={(e) => setSmtpForm({ ...smtpForm, smtpPass: e.target.value })}
+              placeholder={settings?.smtp_configured ? '•••• •••• •••• ••••' : 'abcd efgh ijkl mnop'}
+              autoComplete="off" />
+          </label>
+          {smtpMsg && <p className={`status status--${smtpMsg.type}`}>{smtpMsg.message}</p>}
+          <div className="row-actions">
+            <button className="btn btn--primary">{t('notifSave')}</button>
+            {settings?.smtp_configured && (
+              <button type="button" className="btn btn--ghost" onClick={removeSmtp}>
+                {t('notifRemove')}
+              </button>
+            )}
+          </div>
+        </form>
+      </section>
 
       {/* Theme */}
       <section className="card">
