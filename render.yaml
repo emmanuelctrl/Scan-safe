@@ -37,3 +37,8 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      # Recommended on Render: the free plan blocks outbound SMTP, so use
+      # Resend (HTTPS email API) instead. Get a key at https://resend.com and
+      # paste it here after the first deploy.
+      - key: RESEND_API_KEY
+        sync: false
