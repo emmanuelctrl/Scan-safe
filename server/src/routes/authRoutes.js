@@ -1,4 +1,4 @@
-// Authentication routes: register & login.
+// Authentication routes: register and login.
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import config from '../config/env.js';
@@ -18,7 +18,7 @@ function signToken(user) {
   );
 }
 
-// POST /api/auth/register — create a new account.
+// POST /api/auth/register — create a new account and sign the user in immediately.
 router.post(
   '/register',
   asyncHandler(async (req, res) => {
@@ -41,7 +41,7 @@ router.post(
     const data = validate(loginSchema, req.body);
     const user = await UserModel.findByEmail(data.email);
 
-    // Use a single generic message to avoid leaking which part was wrong.
+    // Generic message so we don't leak which part was wrong.
     if (!user || !UserModel.verifyPassword(user, data.password)) {
       throw ApiError.unauthorized('Invalid email or password.');
     }

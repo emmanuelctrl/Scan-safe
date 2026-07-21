@@ -56,20 +56,34 @@ export function invalidateGmailTransporter(user) {
  * @param {object} params.item        The scanned item record.
  * @param {string} params.action      'scan' | 'checkout'
  * @param {number} params.quantity    Units affected.
+ * @param {number} [params.unitPrice] Price the sale was made at (worker may adjust it).
+ * @param {number} [params.listPrice] The item's stored price, to flag adjustments.
  * @param {string} [params.worker]    Email of the worker who scanned.
  * @param {{user:string, pass:string}} [params.smtp]  Per-account Gmail sender.
  */
-export async function sendScanNotification({ to, item, action, quantity, worker, smtp }) {
+export async function sendScanNotification({
+  to, item, action, quantity, unitPrice, listPrice, worker, smtp,
+}) {
   const verb = action === 'checkout' ? 'checked out' : 'scanned';
   const when = new Date().toLocaleString();
   const subject = `🛍️ Inventory Tracker: "${item.name}" ${verb}`;
 
+  const money = (v) => `$${Number(v).toFixed(2)}`;
+  const soldAt = unitPrice ?? item.price;
+  const adjusted = listPrice != null && Number(soldAt) !== Number(listPrice);
+  const priceLine = adjusted
+    ? `${money(soldAt)} (adjusted from ${money(listPrice)})`
+    : money(soldAt);
+  const total = money(soldAt * quantity);
+
   const text =
     `An item was just ${verb} in your store.\n\n` +
     `Item:      ${item.name}\n` +
+    (item.category ? `Category:  ${item.category}\n` : '') +
     `Barcode:   ${item.barcode}\n` +
     `Quantity:  ${quantity}\n` +
-    `Price:     $${Number(item.price).toFixed(2)}\n` +
+    `Price:     ${priceLine}\n` +
+    `Total:     ${total}\n` +
     `Remaining: ${item.quantity}\n` +
     `Worker:    ${worker || 'Unknown'}\n` +
     `Time:      ${when}\n`;
@@ -81,9 +95,11 @@ export async function sendScanNotification({ to, item, action, quantity, worker,
       <table style="border-collapse:collapse;width:100%;">
         <tbody>
           ${row('Item', item.name)}
+          ${item.category ? row('Category', item.category) : ''}
           ${row('Barcode', item.barcode)}
           ${row('Quantity', quantity)}
-          ${row('Price', '$' + Number(item.price).toFixed(2))}
+          ${row('Price', priceLine)}
+          ${row('Total', total)}
           ${row('Remaining stock', item.quantity)}
           ${row('Worker', worker || 'Unknown')}
           ${row('Time', when)}

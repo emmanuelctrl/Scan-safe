@@ -5,7 +5,7 @@ import { api } from '../../api/client.js';
 import ImportPanel from './ImportPanel.jsx';
 import { useLang } from '../../context/LanguageContext.jsx';
 
-const EMPTY = { barcode: '', name: '', price: '', quantity: '', low_stock_at: 5, sku: '' };
+const EMPTY = { barcode: '', name: '', price: '', quantity: '', low_stock_at: 5, sku: '', category: '' };
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 
 export default function InventoryTab({ refreshKey, bumpRefresh }) {
@@ -47,6 +47,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
           quantity: Number(form.quantity || 0),
           low_stock_at: Number(form.low_stock_at || 5),
           sku: form.sku?.trim() || undefined,
+          category: form.category?.trim() || undefined,
         },
       });
       setForm(EMPTY);
@@ -75,6 +76,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
           price: Number(editRow.price || 0),
           low_stock_at: Number(editRow.low_stock_at || 0),
           sku: editRow.sku?.trim() || undefined,
+          category: editRow.category?.trim() || '',
         },
       });
       setEditingId(null);
@@ -132,6 +134,12 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
           <input type="number" min="0" placeholder={t('phQty')} value={form.quantity} onChange={updateForm('quantity')} />
           <input type="number" min="0" placeholder={t('phLowStock')} value={form.low_stock_at} onChange={updateForm('low_stock_at')} />
           <input placeholder={t('phSku')} value={form.sku} onChange={updateForm('sku')} />
+          <input placeholder={t('phCategory')} value={form.category} onChange={updateForm('category')} list="category-options" />
+          <datalist id="category-options">
+            {[...new Set(items.map((i) => i.category).filter(Boolean))].map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
           <button className="btn btn--primary">{t('add')}</button>
         </form>
         {notice && <p className={`status status--${notice.type}`}>{notice.message}</p>}
@@ -155,7 +163,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t('thName')}</th><th>{t('thBarcode')}</th><th>{t('thPrice')}</th><th>{t('thQty')}</th>
+                  <th>{t('thName')}</th><th>{t('thCategory')}</th><th>{t('thBarcode')}</th><th>{t('thPrice')}</th><th>{t('thQty')}</th>
                   <th>{t('thLowAt')}</th><th>SKU</th><th></th>
                 </tr>
               </thead>
@@ -164,6 +172,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                   editingId === item.id ? (
                     <tr key={item.id} className="is-editing">
                       <td><input value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} /></td>
+                      <td><input value={editRow.category || ''} onChange={(e) => setEditRow({ ...editRow, category: e.target.value })} list="category-options" /></td>
                       <td><input value={editRow.barcode} onChange={(e) => setEditRow({ ...editRow, barcode: e.target.value })} /></td>
                       <td><input type="number" step="0.01" min="0" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: e.target.value })} /></td>
                       <td className="muted" title={t('useStepper')}>{editRow.quantity}</td>
@@ -177,6 +186,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                   ) : (
                     <tr key={item.id} className={item.quantity === 0 ? 'is-oos' : ''}>
                       <td>{item.name}</td>
+                      <td className="muted">{item.category || '—'}</td>
                       <td className="muted">{item.barcode}</td>
                       <td>{money(item.price)}</td>
                       <td>
