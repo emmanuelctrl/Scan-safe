@@ -146,9 +146,10 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `CLIENT_ORIGIN` | ✅ (prod) | Comma-separated allowed front-end origins for CORS. |
 | `JWT_SECRET` | ✅ | Long random string used to sign login tokens. |
 | `JWT_EXPIRES_IN` | – | Session lifetime (default `7d`). |
-| `BREVO_API_KEY` | – | Enables notification emails via [Brevo](https://brevo.com)'s HTTPS API — the easiest way to email any recipient on an SMTP-blocked host (verify one sender, no domain). Requires `MAIL_FROM` set to the verified sender. |
+| `BREVO_API_KEY` | – | Enables notification emails via [Brevo](https://brevo.com)'s HTTPS API — email any recipient on an SMTP-blocked host (verify one sender, no domain). Requires `MAIL_FROM` set to the verified sender. |
+| `SENDGRID_API_KEY` | – | Enables notification emails via [SendGrid](https://sendgrid.com)'s HTTPS API — email any recipient (verify a single sender, no domain). Requires `MAIL_FROM` set to the verified sender. |
 | `RESEND_API_KEY` | – | Enables sending notification emails via [Resend](https://resend.com)'s HTTPS API. Needs a verified domain to reach arbitrary recipients. |
-| `EMAIL_PROVIDER` | – | Which transport to prefer when several are set: `brevo`, `resend`, `smtp`, or `auto` (default). |
+| `EMAIL_PROVIDER` | – | Which transport to prefer when several are set: `brevo`, `sendgrid`, `resend`, `smtp`, or `auto` (default). |
 | `DEFAULT_OWNER_PIN` | – | PIN assigned to each new account (default `123456`). |
 | `ADMIN_PASSWORD` | – | Password for the app-wide Super Admin panel at `/admin` (default `0703`). Change this before deploying publicly. |
 | `DATABASE_PATH` | – | Local SQLite file path used in dev when no Turso URL is set (default `./data/inventory.sqlite`). |
@@ -169,14 +170,18 @@ and takes priority over SMTP.
 - **[Brevo](https://brevo.com) — send to any recipient, no domain needed.**
   Verify a single sender email (Senders, Domains & Dedicated IPs → **Senders**),
   create an API key, then set **`BREVO_API_KEY`** and **`MAIL_FROM`** to that
-  exact verified sender (e.g. `Inventory Tracker <you@gmail.com>`). This is the
-  simplest way to email various store owners.
+  exact verified sender (e.g. `Inventory Tracker <you@gmail.com>`).
+- **[SendGrid](https://sendgrid.com) — send to any recipient, no domain needed.**
+  Verify a single sender (Settings → Sender Authentication → **Single Sender
+  Verification**), create an API key (Settings → API Keys), then set
+  **`SENDGRID_API_KEY`** and **`MAIL_FROM`** to that verified sender.
 - **[Resend](https://resend.com) — alternative.** Set **`RESEND_API_KEY`**. To
   send to arbitrary addresses you must verify a sending domain; until then its
   test sender only delivers to your own Resend account email.
 
-If more than one is configured, set `EMAIL_PROVIDER` (`brevo` | `resend` |
-`smtp`) to choose; the default `auto` prefers Resend, then Brevo, then SMTP.
+If more than one is configured, set `EMAIL_PROVIDER` (`brevo` | `sendgrid` |
+`resend` | `smtp`) to choose; the default `auto` prefers Resend, then Brevo,
+then SendGrid, then SMTP.
 Once configured, use the **Send test email** button in **Owner Portal →
 Settings → Checkout notifications** to confirm delivery — it reports the exact
 reason if the provider rejects the send.

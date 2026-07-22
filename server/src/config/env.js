@@ -94,6 +94,15 @@ const config = {
     apiKey: process.env.BREVO_API_KEY || '',
     apiUrl: process.env.BREVO_API_URL || 'https://api.brevo.com/v3/smtp/email',
   },
+
+  // SendGrid (https://sendgrid.com) — HTTP email API over HTTPS. Also sends to
+  // any recipient after verifying a single sender (Sender Authentication →
+  // Single Sender Verification, no domain needed). Requires SENDGRID_API_KEY +
+  // MAIL_FROM set to your verified sender address.
+  sendgrid: {
+    apiKey: process.env.SENDGRID_API_KEY || '',
+    apiUrl: process.env.SENDGRID_API_URL || 'https://api.sendgrid.com/v3/mail/send',
+  },
 };
 
 // Warn loudly if the JWT secret is left at its insecure default in production.

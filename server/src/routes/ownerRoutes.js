@@ -251,7 +251,7 @@ router.post(
     const settings = await SettingsModel.get(userId);
     if (!serverEmailReady()) {
       throw ApiError.badRequest(
-        'No email sender is configured on the server. Set BREVO_API_KEY (+ MAIL_FROM) or RESEND_API_KEY.'
+        'No email sender is configured on the server. Set SENDGRID_API_KEY / BREVO_API_KEY (+ MAIL_FROM) or RESEND_API_KEY.'
       );
     }
     const result = await sendTestEmail({ to: settings.notification_email }).catch((err) => {
