@@ -1,11 +1,11 @@
-barcode,name,price,quantity,low_stock_at,sku,category
-0001112223334,Silk Scarf,45.00,12,5,ACC-SCF-01,Accessories
-0001112223335,Leather Handbag,189.99,3,4,BAG-LTH-02,Bags
-0001112223336,Cotton T-Shirt,24.50,0,6,APP-TSH-03,Apparel
-0001112223337,Wool Beanie,19.99,25,8,ACC-BNE-04,Accessories
-0001112223338,Denim Jacket,89.00,2,3,APP-JKT-05,Apparel
-0001112223339,Pearl Earrings,59.95,7,5,ACC-EAR-06,Accessories
-0001112223340,Cashmere Sweater,129.00,4,5,APP-SWT-07,Apparel
-0001112223341,Canvas Tote,34.00,18,6,BAG-TOT-08,Bags
-0001112223342,Leather Loafers,120.00,6,3,SHO-LFR-09,Shoes
-0001112223343,Running Sneakers,95.00,10,4,SHO-SNK-10,Shoes
+barcode,name,price,quantity,low_stock_at,category
+0001112223334,Silk Scarf,45.00,12,5,Accessories
+0001112223335,Leather Handbag,189.99,3,4,Bags
+0001112223336,Cotton T-Shirt,24.50,0,6,Apparel
+0001112223337,Wool Beanie,19.99,25,8,Accessories
+0001112223338,Denim Jacket,89.00,2,3,Apparel
+0001112223339,Pearl Earrings,59.95,7,5,Accessories
+0001112223340,Cashmere Sweater,129.00,4,5,Apparel
+0001112223341,Canvas Tote,34.00,18,6,Bags
+0001112223342,Leather Loafers,120.00,6,3,Shoes
+0001112223343,Running Sneakers,95.00,10,4,Shoes

@@ -14,12 +14,12 @@ separate inventory and dashboard** — and inventory can be built in seconds by
 ## ✨ Features
 
 - **Email / password authentication** — sign in or create an account.
-- **Per-store Gmail checkout alerts** — optionally add your Gmail address and a
-  Gmail **App Password** (at signup or later in Settings) and every checkout
-  emails you an alert from your own Gmail. The App Password is encrypted at rest
-  and never sent back to the browser.
-- **Worker portal** with a live **camera barcode/QR scanner** (plus manual
-  entry). Every scan checks the item out and **emails the store owner**.
+- **Checkout email alerts** — every checkout emails the store's notification
+  address, sent through an HTTP email API (Brevo / Resend) so it works even on
+  hosts that block SMTP. Configured once on the server (see below).
+- **Worker portal** with a live **camera barcode/QR scanner**, a **search bar**
+  to find an item by name/barcode and tap to sell, plus manual entry. Every
+  checkout updates stock and **emails the store owner**.
 - **Owner portal** locked behind a **6-digit PIN** (customizable), showing:
   - Out-of-stock items
   - Low-stock alerts
@@ -146,7 +146,6 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `CLIENT_ORIGIN` | ✅ (prod) | Comma-separated allowed front-end origins for CORS. |
 | `JWT_SECRET` | ✅ | Long random string used to sign login tokens. |
 | `JWT_EXPIRES_IN` | – | Session lifetime (default `7d`). |
-| `CREDENTIAL_SECRET` | – | Key used to encrypt stored Gmail App Passwords at rest. Falls back to `JWT_SECRET`; set a dedicated value in production. |
 | `BREVO_API_KEY` | – | Enables notification emails via [Brevo](https://brevo.com)'s HTTPS API — the easiest way to email any recipient on an SMTP-blocked host (verify one sender, no domain). Requires `MAIL_FROM` set to the verified sender. |
 | `RESEND_API_KEY` | – | Enables sending notification emails via [Resend](https://resend.com)'s HTTPS API. Needs a verified domain to reach arbitrary recipients. |
 | `EMAIL_PROVIDER` | – | Which transport to prefer when several are set: `brevo`, `resend`, `smtp`, or `auto` (default). |
@@ -178,25 +177,9 @@ and takes priority over SMTP.
 
 If more than one is configured, set `EMAIL_PROVIDER` (`brevo` | `resend` |
 `smtp`) to choose; the default `auto` prefers Resend, then Brevo, then SMTP.
-Use the **Send test email** button in Settings to confirm delivery.
-
-**Per-account Gmail (no server SMTP needed):** each store owner can instead add
-their own Gmail address + a [Gmail **App Password**](https://myaccount.google.com/apppasswords)
-— during signup or later in **Owner Portal → Settings → Checkout notifications**.
-When set, that account's checkout alerts are sent through the owner's Gmail
-(`smtp.gmail.com`) from their own address, independent of the global `SMTP_*`
-settings. The App Password is encrypted at rest with `CREDENTIAL_SECRET` (see
-below) and is never returned to the browser. A regular Google password will not
-work — App Passwords require 2-Step Verification to be enabled on the account.
-
-After saving, use the **Send test email** button in that Settings card to
-confirm it works — it reports the exact reason if Gmail rejects the send. The
-two common failures are: **(1)** the address/App Password isn't accepted (turn
-on 2-Step Verification and use a 16-character App Password), or **(2)** the host
-running the backend **blocks outbound SMTP on port 465** — common on free
-hosting tiers (e.g. Render free). If your host blocks SMTP, Gmail sending can't
-work there no matter what; run somewhere that permits outbound SMTP, or use a
-provider whose SMTP port is open.
+Once configured, use the **Send test email** button in **Owner Portal →
+Settings → Checkout notifications** to confirm delivery — it reports the exact
+reason if the provider rejects the send.
 
 ### Frontend (`client/.env`)
 
@@ -212,7 +195,7 @@ In **Owner Portal → Inventory → Import from Excel / CSV**, upload a `.xlsx`,
 `.xls`, or `.csv` file. The moment it's uploaded it becomes your inventory.
 
 - **Required columns:** `barcode`, `name`
-- **Optional columns:** `price`, `quantity`, `low_stock_at`, `sku`
+- **Optional columns:** `price`, `quantity`, `low_stock_at`, `category`
 - Headers are matched flexibly and case-insensitively. Common aliases work too,
   e.g. `UPC`/`EAN`/`code` → barcode, `Product`/`Item` → name, `Qty`/`Stock` →
   quantity, `Reorder`/`Threshold` → low_stock_at.
@@ -250,7 +233,7 @@ obtained by verifying the PIN at `POST /api/owner/unlock`.
 | `PUT` | `/api/owner/settings/pin` | owner | Change PIN |
 | `PUT` | `/api/owner/settings/notification-email` | owner | Change email |
 | `PUT` | `/api/owner/settings/theme` | owner | Save theme |
-| `PUT`/`DELETE` | `/api/owner/settings/smtp` | owner | Set / remove Gmail notification sender |
+| `POST` | `/api/owner/settings/notifications/test` | owner | Send a test notification email |
 | `POST` | `/api/admin/login` | – | Verify admin password → admin token |
 | `GET` | `/api/admin/overview` | admin | App-wide totals (all stores) |
 | `GET` | `/api/admin/stores` | admin | Every registered store + snapshot |

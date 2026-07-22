@@ -7,7 +7,6 @@
 import bcrypt from 'bcryptjs';
 import { get, withTransaction } from '../config/database.js';
 import config from '../config/env.js';
-import { encryptSecret } from '../utils/secretCipher.js';
 
 const SALT_ROUNDS = 10;
 
@@ -21,18 +20,10 @@ export const UserModel = {
     return get('SELECT * FROM users WHERE id = ?', [id]);
   },
 
-  /**
-   * Create a new user (store) and seed their default settings atomically.
-   * Optionally stores a Gmail sender + app password (encrypted) so checkout
-   * notifications send from the owner's own Gmail; both must be provided
-   * together or neither.
-   */
-  async create({ email, password, name, role = 'worker', smtpUser, smtpPass }) {
+  /** Create a new user (store) and seed their default settings atomically. */
+  async create({ email, password, name, role = 'worker' }) {
     const passwordHash = bcrypt.hashSync(password, SALT_ROUNDS);
     const defaultPinHash = bcrypt.hashSync(config.defaultOwnerPin, SALT_ROUNDS);
-
-    const hasSmtp = Boolean(smtpUser && smtpPass);
-    const smtpPassEnc = hasSmtp ? encryptSecret(String(smtpPass).replace(/\s+/g, '')) : null;
 
     const userId = await withTransaction(async (tx) => {
       const info = await tx.run(
@@ -43,9 +34,9 @@ export const UserModel = {
 
       // Notifications default to the owner's own email until they change it.
       await tx.run(
-        `INSERT INTO settings (user_id, owner_pin_hash, notification_email, theme, smtp_user, smtp_pass_enc)
-         VALUES (?, ?, ?, 'light', ?, ?)`,
-        [uid, defaultPinHash, email, hasSmtp ? smtpUser : null, smtpPassEnc]
+        `INSERT INTO settings (user_id, owner_pin_hash, notification_email, theme)
+         VALUES (?, ?, ?, 'light')`,
+        [uid, defaultPinHash, email]
       );
       return uid;
     });

@@ -1,13 +1,13 @@
 // Email notification service.
 //
 // Sends the store owner an email whenever a worker scans/checks out an item.
-// If SMTP credentials are not configured, the email is logged to the console
-// instead — so local development works out of the box without an SMTP account.
+// Delivery uses an HTTP email API (Brevo or Resend) or a global SMTP server;
+// if none is configured the email is logged to the console instead, so local
+// development works out of the box.
 import nodemailer from 'nodemailer';
 import config from '../config/env.js';
 
-// Optional app-wide transporter from SMTP_* env vars. Used only when an
-// account hasn't supplied its own Gmail credentials.
+// Optional app-wide SMTP transporter from SMTP_* env vars.
 let globalTransporter = null;
 
 if (config.smtp.host && config.smtp.user) {
@@ -19,44 +19,13 @@ if (config.smtp.host && config.smtp.user) {
   });
 }
 
-// Cache per-account Gmail transporters keyed by the sender address so we don't
-// rebuild a connection pool on every scan.
-const gmailTransporters = new Map();
-
-function getGmailTransporter({ user, pass }) {
-  const cached = gmailTransporters.get(user);
-  if (cached) return cached;
-  const t = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: { user, pass },
-    // Fail fast on a bad/unreachable config so a checkout can't hang on it.
-    connectionTimeout: 8000,
-    greetingTimeout: 8000,
-    socketTimeout: 10000,
-  });
-  gmailTransporters.set(user, t);
-  return t;
-}
-
-/** Forget a cached transporter when its credentials change or are removed. */
-export function invalidateGmailTransporter(user) {
-  const t = gmailTransporters.get(user);
-  if (t) {
-    try { t.close(); } catch { /* ignore */ }
-    gmailTransporters.delete(user);
-  }
-}
-
 // Brevo needs a verified sender email; it's only usable with MAIL_FROM set.
 const hasResend = Boolean(config.resend.apiKey);
 const hasBrevo = Boolean(config.brevo.apiKey && config.mailFrom);
 
 /**
- * True when the server itself can send email without any per-account setup —
- * i.e. Resend, Brevo, or a global SMTP transporter is configured. The client
- * uses this to know notifications will work even without a Gmail App Password.
+ * True when the server can send email — i.e. Resend, Brevo, or a global SMTP
+ * transporter is configured. The client uses this to know notifications work.
  */
 export function serverEmailReady() {
   return Boolean(hasResend || hasBrevo || globalTransporter);
@@ -155,10 +124,9 @@ async function sendViaBrevo({ to, subject, text, html }) {
 /**
  * Deliver an email through the best available transport, in priority order
  * (see chooseProvider): Resend or Brevo (HTTP APIs that work where SMTP is
- * blocked), else the account's own Gmail / a global SMTP transporter, else a
- * console-log dev fallback.
+ * blocked), else a global SMTP transporter, else a console-log dev fallback.
  */
-async function deliver({ to, subject, text, html, smtp }) {
+async function deliver({ to, subject, text, html }) {
   const provider = chooseProvider();
   if (provider === 'resend') {
     await sendViaResend({ to, subject, text, html });
@@ -169,10 +137,7 @@ async function deliver({ to, subject, text, html, smtp }) {
     return { delivered: true, via: 'brevo' };
   }
 
-  const transporter = smtp ? getGmailTransporter(smtp) : globalTransporter;
-  const from = smtp ? `Inventory Tracker <${smtp.user}>` : config.smtp.from;
-
-  if (!transporter) {
+  if (!globalTransporter) {
     console.log('\n[email:dev] No email sender configured — notification not sent.');
     console.log(`[email:dev] To: ${to}`);
     console.log(`[email:dev] Subject: ${subject}`);
@@ -180,8 +145,8 @@ async function deliver({ to, subject, text, html, smtp }) {
     return { delivered: false, simulated: true };
   }
 
-  await transporter.sendMail({ from, to, subject, text, html });
-  return { delivered: true, via: smtp ? 'gmail' : 'smtp' };
+  await globalTransporter.sendMail({ from: config.smtp.from, to, subject, text, html });
+  return { delivered: true, via: 'smtp' };
 }
 
 /**
@@ -217,23 +182,22 @@ export function describeSmtpError(err) {
     }
     return `Email API error: ${err.detail || err.message}`;
   }
-  if (code === 'EAUTH' || /5\.7\.8|Username and Password not accepted|BadCredentials/i.test(resp)) {
-    return 'Gmail did not accept the address or App Password. Turn on 2-Step Verification on that Google account and use a 16-character App Password (not your normal password).';
+  if (code === 'EAUTH' || /Username and Password not accepted|BadCredentials/i.test(resp)) {
+    return 'The SMTP server rejected the username or password. Check your SMTP_USER / SMTP_PASS.';
   }
   if (['ETIMEDOUT', 'ESOCKET', 'ECONNECTION', 'ECONNREFUSED', 'EDNS'].includes(code)) {
-    return "Couldn't reach Gmail's mail server on port 465. The host running this app may block outbound SMTP (common on free hosting) — set RESEND_API_KEY to send over HTTPS instead, or use a host that allows SMTP.";
+    return "Couldn't reach the SMTP server. The host may block outbound SMTP (common on free hosting) — set BREVO_API_KEY or RESEND_API_KEY to send over HTTPS instead.";
   }
   return err?.message || 'Unknown email error.';
 }
 
 /**
- * Send a one-off test email to confirm an account's Gmail credentials work.
+ * Send a one-off test email to confirm the server's email setup works.
  * Throws the raw error on failure so the caller can describe it.
  */
-export async function sendTestEmail({ to, smtp }) {
+export async function sendTestEmail({ to }) {
   return deliver({
     to,
-    smtp,
     subject: '✅ Inventory Tracker — test email',
     text:
       'This is a test from Inventory Tracker.\n\n' +
@@ -252,10 +216,9 @@ export async function sendTestEmail({ to, smtp }) {
  * @param {number} [params.unitPrice] Price the sale was made at (worker may adjust it).
  * @param {number} [params.listPrice] The item's stored price, to flag adjustments.
  * @param {string} [params.worker]    Email of the worker who scanned.
- * @param {{user:string, pass:string}} [params.smtp]  Per-account Gmail sender.
  */
 export async function sendScanNotification({
-  to, item, action, quantity, unitPrice, listPrice, worker, smtp,
+  to, item, action, quantity, unitPrice, listPrice, worker,
 }) {
   const verb = action === 'checkout' ? 'checked out' : 'scanned';
   const when = new Date().toLocaleString();
@@ -303,7 +266,7 @@ export async function sendScanNotification({
       </p>
     </div>`;
 
-  return deliver({ to, subject, text, html, smtp });
+  return deliver({ to, subject, text, html });
 }
 
 function row(label, value) {
