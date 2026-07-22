@@ -614,6 +614,7 @@ input[type='file']::file-selector-button:hover { background: var(--surface-3); }
 /* ── Worker category browser ───────────────────────────────────── */
 .catalog { margin-top: 1rem; }
 .catalog__title { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 0.5rem; }
+.search-input { margin-bottom: 0.6rem; }
 .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
 .chip {
   border: 1px solid var(--border); border-radius: 999px;
@@ -664,7 +665,7 @@ input[type='file']::file-selector-button:hover { background: var(--surface-3); }
 /* ── Item / import forms ────────────────────────────────────── */
 .item-form {
   display: grid;
-  grid-template-columns: repeat(7, 1fr) auto;
+  grid-template-columns: repeat(6, 1fr) auto;
   gap: 0.5rem; align-items: center;
 }
 @media (max-width: 900px) { .item-form { grid-template-columns: 1fr 1fr; } }

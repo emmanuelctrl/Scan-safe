@@ -5,7 +5,7 @@ import { api } from '../../api/client.js';
 import ImportPanel from './ImportPanel.jsx';
 import { useLang } from '../../context/LanguageContext.jsx';
 
-const EMPTY = { barcode: '', name: '', price: '', quantity: '', low_stock_at: 5, sku: '', category: '' };
+const EMPTY = { barcode: '', name: '', price: '', quantity: '', low_stock_at: 2, category: '' };
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 
 export default function InventoryTab({ refreshKey, bumpRefresh }) {
@@ -45,8 +45,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
           name: form.name.trim(),
           price: Number(form.price || 0),
           quantity: Number(form.quantity || 0),
-          low_stock_at: Number(form.low_stock_at || 5),
-          sku: form.sku?.trim() || undefined,
+          low_stock_at: Number(form.low_stock_at || 2),
           category: form.category?.trim() || undefined,
         },
       });
@@ -75,7 +74,6 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
           barcode: editRow.barcode.trim(),
           price: Number(editRow.price || 0),
           low_stock_at: Number(editRow.low_stock_at || 0),
-          sku: editRow.sku?.trim() || undefined,
           category: editRow.category?.trim() || '',
         },
       });
@@ -133,7 +131,6 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
           <input type="number" step="0.01" min="0" placeholder={t('phPrice')} value={form.price} onChange={updateForm('price')} />
           <input type="number" min="0" placeholder={t('phQty')} value={form.quantity} onChange={updateForm('quantity')} />
           <input type="number" min="0" placeholder={t('phLowStock')} value={form.low_stock_at} onChange={updateForm('low_stock_at')} />
-          <input placeholder={t('phSku')} value={form.sku} onChange={updateForm('sku')} />
           <input placeholder={t('phCategory')} value={form.category} onChange={updateForm('category')} list="category-options" />
           <datalist id="category-options">
             {[...new Set(items.map((i) => i.category).filter(Boolean))].map((c) => (
@@ -164,7 +161,7 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
               <thead>
                 <tr>
                   <th>{t('thName')}</th><th>{t('thCategory')}</th><th>{t('thBarcode')}</th><th>{t('thPrice')}</th><th>{t('thQty')}</th>
-                  <th>{t('thLowAt')}</th><th>SKU</th><th></th>
+                  <th>{t('thLowAt')}</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -177,7 +174,6 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                       <td><input type="number" step="0.01" min="0" value={editRow.price} onChange={(e) => setEditRow({ ...editRow, price: e.target.value })} /></td>
                       <td className="muted" title={t('useStepper')}>{editRow.quantity}</td>
                       <td><input type="number" min="0" value={editRow.low_stock_at} onChange={(e) => setEditRow({ ...editRow, low_stock_at: e.target.value })} /></td>
-                      <td><input value={editRow.sku || ''} onChange={(e) => setEditRow({ ...editRow, sku: e.target.value })} /></td>
                       <td className="row-actions">
                         <button className="btn btn--small btn--primary" onClick={() => saveEdit(item.id)}>{t('save')}</button>
                         <button className="btn btn--small btn--ghost" onClick={() => { setEditingId(null); setEditRow(null); }}>{t('cancel')}</button>
@@ -227,7 +223,6 @@ export default function InventoryTab({ refreshKey, bumpRefresh }) {
                         )}
                       </td>
                       <td className="muted">{item.low_stock_at}</td>
-                      <td className="muted">{item.sku || '—'}</td>
                       <td className="row-actions">
                         <button className="btn btn--small btn--secondary" onClick={() => startEdit(item)}>{t('edit')}</button>
                         <button className="btn btn--small btn--danger" onClick={() => remove(item.id)}>{t('delete')}</button>

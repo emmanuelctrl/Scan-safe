@@ -15,7 +15,6 @@ import { StockModel } from '../models/stockModel.js';
 import { SettingsModel } from '../models/settingsModel.js';
 import { parseInventoryFile } from '../services/importService.js';
 import {
-  invalidateGmailTransporter,
   sendTestEmail,
   describeSmtpError,
   serverEmailReady,
@@ -31,7 +30,6 @@ import {
   notificationEmailSchema,
   themeSchema,
   stockAdjustSchema,
-  smtpCredentialsSchema,
 } from '../validators/schemas.js';
 import { validate } from '../utils/validate.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -243,61 +241,29 @@ router.put(
   })
 );
 
-// PUT /api/owner/settings/smtp — set/replace the Gmail sender + App Password
-// used to email checkout notifications. The password is encrypted at rest and
-// never returned to the client.
-router.put(
-  '/settings/smtp',
-  asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const { smtpUser, smtpPass } = validate(smtpCredentialsSchema, req.body);
-    // Drop any cached transporter for the previous address so the new
-    // credentials take effect immediately.
-    const previous = await SettingsModel.get(userId);
-    if (previous?.smtp_user) invalidateGmailTransporter(previous.smtp_user);
-    await SettingsModel.setSmtpCredentials(userId, smtpUser, smtpPass);
-    res.json({ settings: SettingsModel.toPublic(await SettingsModel.get(userId)) });
-  })
-);
-
-// POST /api/owner/settings/smtp/test — send a test email using the stored
-// Gmail credentials and surface the real error if Gmail rejects it, so the
-// owner can tell exactly why notifications aren't arriving.
+// POST /api/owner/settings/notifications/test — send a test email through the
+// server's email provider (Brevo/Resend/SMTP) and surface the real error if it
+// fails, so the owner can tell exactly why notifications aren't arriving.
 router.post(
-  '/settings/smtp/test',
+  '/settings/notifications/test',
   asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const settings = await SettingsModel.get(userId);
-    const smtp = await SettingsModel.getSmtpCredentials(userId);
-    // Need *some* transport: the server's own (Resend/SMTP) or the account's Gmail.
-    if (!smtp && !serverEmailReady()) {
+    if (!serverEmailReady()) {
       throw ApiError.badRequest(
-        'No email sender is set up. Add and save a Gmail App Password above, or set BREVO_API_KEY / RESEND_API_KEY on the server.'
+        'No email sender is configured on the server. Set BREVO_API_KEY (+ MAIL_FROM) or RESEND_API_KEY.'
       );
     }
-    const result = await sendTestEmail({ to: settings.notification_email, smtp })
-      .catch((err) => {
-        console.error('[smtp:test] send failed:', err.message);
-        throw ApiError.badRequest(describeSmtpError(err));
-      });
+    const result = await sendTestEmail({ to: settings.notification_email }).catch((err) => {
+      console.error('[email:test] send failed:', err.message);
+      throw ApiError.badRequest(describeSmtpError(err));
+    });
     if (result?.simulated) {
       throw ApiError.badRequest('No email sender is configured on the server, so nothing was sent.');
     }
     res.json({
       message: `Test email sent to ${settings.notification_email}. Check your inbox (and spam folder).`,
     });
-  })
-);
-
-// DELETE /api/owner/settings/smtp — remove stored Gmail credentials.
-router.delete(
-  '/settings/smtp',
-  asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const previous = await SettingsModel.get(userId);
-    if (previous?.smtp_user) invalidateGmailTransporter(previous.smtp_user);
-    await SettingsModel.clearSmtpCredentials(userId);
-    res.json({ settings: SettingsModel.toPublic(await SettingsModel.get(userId)) });
   })
 );
 

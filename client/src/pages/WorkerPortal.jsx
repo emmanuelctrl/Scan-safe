@@ -29,11 +29,30 @@ export default function WorkerPortal() {
   const [categoryItems, setCategoryItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
 
+  // Item search.
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState(null); // null = no active search
+  const [searching, setSearching] = useState(false);
+
   useEffect(() => {
     api('/api/scan/categories')
       .then((d) => setCategories(d.categories))
       .catch(() => {}); // Non-fatal: worker can still scan without categories.
   }, []);
+
+  // Debounced item search by name / barcode / category.
+  useEffect(() => {
+    const term = search.trim();
+    if (!term) { setSearchResults(null); setSearching(false); return undefined; }
+    setSearching(true);
+    const id = setTimeout(() => {
+      api(`/api/scan/items?search=${encodeURIComponent(term)}`)
+        .then((d) => setSearchResults(d.items))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(id);
+  }, [search]);
 
   // Look up a scanned/typed barcode and open the confirmation panel.
   const startCheckout = useCallback(async (barcode) => {
@@ -209,6 +228,49 @@ export default function WorkerPortal() {
                 {t('checkOut')}
               </button>
             </form>
+
+            {/* Search: find an item by name/barcode and tap to sell. */}
+            <div className="catalog">
+              <input
+                type="search"
+                className="search-input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('searchItems')}
+                aria-label={t('searchItems')}
+              />
+              {search.trim() && (
+                searching ? (
+                  <p className="muted">{t('loading')}</p>
+                ) : !searchResults || searchResults.length === 0 ? (
+                  <p className="muted">{t('noSearchResults')}</p>
+                ) : (
+                  <ul className="pick-list">
+                    {searchResults.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          className="pick-list__item"
+                          disabled={item.quantity === 0 || busy || !!pending}
+                          onClick={() => pickItem(item)}
+                        >
+                          <span className="pick-list__name">
+                            {item.name}
+                            {item.category ? <span className="muted"> · {item.category}</span> : null}
+                          </span>
+                          <span className="pick-list__meta">
+                            {money(item.price)} ·{' '}
+                            {item.quantity === 0
+                              ? t('outBadge')
+                              : t('inStockCount', { n: item.quantity })}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )
+              )}
+            </div>
 
             {/* Browse by category: tap an item to sell without scanning. */}
             {categories.length > 0 && (

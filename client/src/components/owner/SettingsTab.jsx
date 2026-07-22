@@ -13,11 +13,10 @@ export default function SettingsTab() {
 
   const [pinForm, setPinForm] = useState({ currentPin: '', newPin: '', confirmPin: '' });
   const [emailForm, setEmailForm] = useState({ email: '' });
-  const [smtpForm, setSmtpForm] = useState({ smtpUser: '', smtpPass: '' });
   const [serverEmailReady, setServerEmailReady] = useState(false);
   const [pinMsg, setPinMsg] = useState(null);
   const [emailMsg, setEmailMsg] = useState(null);
-  const [smtpMsg, setSmtpMsg] = useState(null);
+  const [testMsg, setTestMsg] = useState(null);
 
   useEffect(() => {
     api('/api/owner/settings', { owner: true })
@@ -25,16 +24,12 @@ export default function SettingsTab() {
         setSettings(d.settings);
         setServerEmailReady(Boolean(d.serverEmailReady));
         setEmailForm({ email: d.settings.notification_email });
-        setSmtpForm({ smtpUser: d.settings.smtp_user || '', smtpPass: '' });
         // Keep the UI theme in sync with the stored account preference.
         if (d.settings.theme && d.settings.theme !== theme) setTheme(d.settings.theme);
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Email works if the server can send (Resend/SMTP) or the owner added Gmail.
-  const canSendEmail = serverEmailReady || settings?.smtp_configured;
 
   async function changePin(e) {
     e.preventDefault();
@@ -72,42 +67,13 @@ export default function SettingsTab() {
     }
   }
 
-  async function saveSmtp(e) {
-    e.preventDefault();
-    setSmtpMsg(null);
+  async function testEmail() {
+    setTestMsg({ type: 'info', message: t('notifTesting') });
     try {
-      const d = await api('/api/owner/settings/smtp', {
-        method: 'PUT',
-        owner: true,
-        body: { smtpUser: smtpForm.smtpUser.trim(), smtpPass: smtpForm.smtpPass.trim() },
-      });
-      setSettings(d.settings);
-      setSmtpForm({ smtpUser: d.settings.smtp_user || '', smtpPass: '' });
-      setSmtpMsg({ type: 'success', message: t('notifSaved') });
+      const d = await api('/api/owner/settings/notifications/test', { method: 'POST', owner: true });
+      setTestMsg({ type: 'success', message: d.message });
     } catch (err) {
-      setSmtpMsg({ type: 'error', message: err.message });
-    }
-  }
-
-  async function removeSmtp() {
-    setSmtpMsg(null);
-    try {
-      const d = await api('/api/owner/settings/smtp', { method: 'DELETE', owner: true });
-      setSettings(d.settings);
-      setSmtpForm({ smtpUser: '', smtpPass: '' });
-      setSmtpMsg({ type: 'success', message: t('notifRemoved') });
-    } catch (err) {
-      setSmtpMsg({ type: 'error', message: err.message });
-    }
-  }
-
-  async function testSmtp() {
-    setSmtpMsg({ type: 'info', message: t('notifTesting') });
-    try {
-      const d = await api('/api/owner/settings/smtp/test', { method: 'POST', owner: true });
-      setSmtpMsg({ type: 'success', message: d.message });
-    } catch (err) {
-      setSmtpMsg({ type: 'error', message: err.message });
+      setTestMsg({ type: 'error', message: err.message });
     }
   }
 
@@ -177,63 +143,21 @@ export default function SettingsTab() {
       <section className="card">
         <div className="card__head">
           <h3>🔔 {t('notifSetupTitle')}</h3>
-          {canSendEmail && (
+          {serverEmailReady && (
             <span className="badge badge--success">{t('notifOn')}</span>
           )}
         </div>
-
+        <p className={serverEmailReady ? 'status status--success' : 'muted'}>
+          {serverEmailReady ? t('notifServerReady') : t('notifNotReady')}
+        </p>
+        {testMsg && <p className={`status status--${testMsg.type}`}>{testMsg.message}</p>}
         {serverEmailReady && (
-          <p className="status status--success">{t('notifServerReady')}</p>
-        )}
-
-        {serverEmailReady && (
-          <div className="row-actions" style={{ margin: '0.5rem 0 0.25rem' }}>
-            <button type="button" className="btn btn--primary" onClick={testSmtp}>
+          <div className="row-actions" style={{ marginTop: '0.75rem' }}>
+            <button type="button" className="btn btn--primary" onClick={testEmail}>
               {t('notifTest')}
             </button>
           </div>
         )}
-        {serverEmailReady && smtpMsg && (
-          <p className={`status status--${smtpMsg.type}`}>{smtpMsg.message}</p>
-        )}
-
-        <p className="muted" style={{ marginTop: serverEmailReady ? '1rem' : 0 }}>
-          {serverEmailReady ? t('notifGmailOptional') : t('notifSetupHelp')}{' '}
-          <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">
-            {t('notifSetupLink')}
-          </a>
-        </p>
-        <form onSubmit={saveSmtp} className="form">
-          <label className="field">
-            <span>{t('gmailAddress')}</span>
-            <input type="email" required value={smtpForm.smtpUser}
-              onChange={(e) => setSmtpForm({ ...smtpForm, smtpUser: e.target.value })}
-              placeholder="you@gmail.com" autoComplete="off" />
-          </label>
-          <label className="field">
-            <span>{t('gmailAppPassword')}</span>
-            <input type="password" required value={smtpForm.smtpPass}
-              onChange={(e) => setSmtpForm({ ...smtpForm, smtpPass: e.target.value })}
-              placeholder={settings?.smtp_configured ? '•••• •••• •••• ••••' : 'abcd efgh ijkl mnop'}
-              autoComplete="off" />
-          </label>
-          {!serverEmailReady && smtpMsg && (
-            <p className={`status status--${smtpMsg.type}`}>{smtpMsg.message}</p>
-          )}
-          <div className="row-actions">
-            <button className="btn btn--primary">{t('notifSave')}</button>
-            {settings?.smtp_configured && !serverEmailReady && (
-              <button type="button" className="btn btn--secondary" onClick={testSmtp}>
-                {t('notifTest')}
-              </button>
-            )}
-            {settings?.smtp_configured && (
-              <button type="button" className="btn btn--ghost" onClick={removeSmtp}>
-                {t('notifRemove')}
-              </button>
-            )}
-          </div>
-        </form>
       </section>
 
       {/* Theme */}

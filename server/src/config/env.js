@@ -36,12 +36,6 @@ const config = {
   jwtSecret: required('JWT_SECRET', 'dev_insecure_secret_change_me'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
 
-  // Symmetric key material used to encrypt stored Gmail app passwords at rest.
-  // Defaults to the JWT secret so the app runs with zero extra setup, but a
-  // dedicated CREDENTIAL_SECRET is recommended in production.
-  credentialSecret:
-    process.env.CREDENTIAL_SECRET || required('JWT_SECRET', 'dev_insecure_secret_change_me'),
-
   defaultOwnerPin: process.env.DEFAULT_OWNER_PIN || '123456',
 
   // Password for the app-wide Super Admin panel (/admin), separate from any

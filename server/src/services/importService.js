@@ -27,8 +27,6 @@ const HEADER_ALIASES = {
   reorderlevel: 'low_stock_at', reorderpoint: 'low_stock_at',
   threshold: 'low_stock_at', minstock: 'low_stock_at', min: 'low_stock_at',
 
-  sku: 'sku', skucode: 'sku', ref: 'sku', reference: 'sku',
-
   category: 'category', categoryname: 'category', type: 'category',
   producttype: 'category', itemtype: 'category', group: 'category',
 };
@@ -131,8 +129,7 @@ export async function parseInventoryFile(buffer, filename) {
       name: String(raw.name ?? '').trim(),
       price: cleanNumber(raw.price ?? 0) ?? 0,
       quantity: cleanNumber(raw.quantity ?? 0) ?? 0,
-      low_stock_at: cleanNumber(raw.low_stock_at ?? 5) ?? 5,
-      sku: raw.sku ? String(raw.sku).trim() : undefined,
+      low_stock_at: cleanNumber(raw.low_stock_at ?? 2) ?? 2,
       category: raw.category ? String(raw.category).trim() : undefined,
     };
 

@@ -97,11 +97,6 @@ const SCHEMA_SQL = `
     owner_pin_hash     TEXT NOT NULL,
     notification_email TEXT NOT NULL,
     theme              TEXT NOT NULL DEFAULT 'light' CHECK (theme IN ('light','dark')),
-    -- Optional per-account Gmail sender for checkout notifications. The app
-    -- password is encrypted at rest (never hashed — SMTP auth needs the real
-    -- value) and never returned to the client.
-    smtp_user          TEXT,
-    smtp_pass_enc      TEXT,
     updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -112,8 +107,7 @@ const SCHEMA_SQL = `
     name           TEXT NOT NULL,
     price          REAL NOT NULL DEFAULT 0 CHECK (price >= 0),
     quantity       INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
-    low_stock_at   INTEGER NOT NULL DEFAULT 5 CHECK (low_stock_at >= 0),
-    sku            TEXT,
+    low_stock_at   INTEGER NOT NULL DEFAULT 2 CHECK (low_stock_at >= 0),
     category       TEXT,
     created_at     TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
@@ -166,15 +160,6 @@ export async function initDatabase() {
  * added later must be applied with ALTER TABLE here.
  */
 async function migrate() {
-  const cols = await base.all(`PRAGMA table_info(settings)`);
-  const names = new Set(cols.map((c) => c.name));
-  if (!names.has('smtp_user')) {
-    await base.run(`ALTER TABLE settings ADD COLUMN smtp_user TEXT`);
-  }
-  if (!names.has('smtp_pass_enc')) {
-    await base.run(`ALTER TABLE settings ADD COLUMN smtp_pass_enc TEXT`);
-  }
-
   const itemCols = await base.all(`PRAGMA table_info(items)`);
   const itemNames = new Set(itemCols.map((c) => c.name));
   if (!itemNames.has('category')) {
