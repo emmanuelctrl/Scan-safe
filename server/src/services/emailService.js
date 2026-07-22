@@ -19,16 +19,18 @@ if (config.smtp.host && config.smtp.user) {
   });
 }
 
-// Brevo needs a verified sender email; it's only usable with MAIL_FROM set.
+// Brevo/SendGrid need a verified sender email; only usable with MAIL_FROM set.
 const hasResend = Boolean(config.resend.apiKey);
 const hasBrevo = Boolean(config.brevo.apiKey && config.mailFrom);
+const hasSendgrid = Boolean(config.sendgrid.apiKey && config.mailFrom);
 
 /**
- * True when the server can send email — i.e. Resend, Brevo, or a global SMTP
- * transporter is configured. The client uses this to know notifications work.
+ * True when the server can send email — i.e. Resend, Brevo, SendGrid, or a
+ * global SMTP transporter is configured. The client uses this to know
+ * notifications will work.
  */
 export function serverEmailReady() {
-  return Boolean(hasResend || hasBrevo || globalTransporter);
+  return Boolean(hasResend || hasBrevo || hasSendgrid || globalTransporter);
 }
 
 /** Which transport a given send should use, honouring EMAIL_PROVIDER. */
@@ -36,10 +38,12 @@ function chooseProvider() {
   const pref = config.emailProvider;
   if (pref === 'resend' && hasResend) return 'resend';
   if (pref === 'brevo' && hasBrevo) return 'brevo';
+  if (pref === 'sendgrid' && hasSendgrid) return 'sendgrid';
   if (pref === 'smtp') return 'smtp';
   // auto (or a preferred provider that isn't configured): first available.
   if (hasResend) return 'resend';
   if (hasBrevo) return 'brevo';
+  if (hasSendgrid) return 'sendgrid';
   return 'smtp';
 }
 
@@ -121,10 +125,50 @@ async function sendViaBrevo({ to, subject, text, html }) {
   }
 }
 
+/** Send one email via SendGrid's HTTPS API (single verified sender → any recipient). */
+async function sendViaSendgrid({ to, subject, text, html }) {
+  const from = parseFrom(config.mailFrom);
+  let res;
+  try {
+    res = await fetch(config.sendgrid.apiUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.sendgrid.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from,
+        subject,
+        content: [
+          { type: 'text/plain', value: text },
+          ...(html ? [{ type: 'text/html', value: html }] : []),
+        ],
+      }),
+    });
+  } catch (netErr) {
+    const err = new Error(`Could not reach the SendGrid API: ${netErr.message}`);
+    err.code = 'ESENDGRID';
+    err.status = 0;
+    err.detail = netErr.message;
+    throw err;
+  }
+  if (!res.ok) {
+    let detail = '';
+    try { detail = JSON.stringify(await res.json()); }
+    catch { detail = await res.text().catch(() => ''); }
+    const err = new Error(`SendGrid ${res.status}: ${detail}`);
+    err.code = 'ESENDGRID';
+    err.status = res.status;
+    err.detail = detail;
+    throw err;
+  }
+}
+
 /**
  * Deliver an email through the best available transport, in priority order
- * (see chooseProvider): Resend or Brevo (HTTP APIs that work where SMTP is
- * blocked), else a global SMTP transporter, else a console-log dev fallback.
+ * (see chooseProvider): Resend / Brevo / SendGrid (HTTP APIs that work where
+ * SMTP is blocked), else a global SMTP transporter, else a console-log fallback.
  */
 async function deliver({ to, subject, text, html }) {
   const provider = chooseProvider();
@@ -135,6 +179,10 @@ async function deliver({ to, subject, text, html }) {
   if (provider === 'brevo') {
     await sendViaBrevo({ to, subject, text, html });
     return { delivered: true, via: 'brevo' };
+  }
+  if (provider === 'sendgrid') {
+    await sendViaSendgrid({ to, subject, text, html });
+    return { delivered: true, via: 'sendgrid' };
   }
 
   if (!globalTransporter) {
@@ -156,6 +204,19 @@ async function deliver({ to, subject, text, html }) {
 export function describeSmtpError(err) {
   const code = err?.code;
   const resp = err?.response || err?.message || '';
+  // SendGrid (HTTP API) errors.
+  if (code === 'ESENDGRID') {
+    if (err.status === 0) {
+      return "Couldn't reach the SendGrid email API. Check the server's network access to api.sendgrid.com.";
+    }
+    if (err.status === 401) {
+      return 'Your SendGrid API key was rejected. Check SENDGRID_API_KEY on the server.';
+    }
+    if (err.status === 403 || /verified Sender Identity|does not match a verified/i.test(err.detail || '')) {
+      return 'SendGrid rejected the sender. In SendGrid, verify your MAIL_FROM address under Settings → Sender Authentication → Single Sender Verification, then try again.';
+    }
+    return `Email API error: ${err.detail || err.message}`;
+  }
   // Brevo (HTTP API) errors.
   if (code === 'EBREVO') {
     if (err.status === 0) {
