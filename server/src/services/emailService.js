@@ -1,9 +1,9 @@
 // Email notification service.
 //
 // Sends the store owner an email whenever a worker scans/checks out an item.
-// Delivery uses an HTTP email API (Brevo or Resend) or a global SMTP server;
-// if none is configured the email is logged to the console instead, so local
-// development works out of the box.
+// Delivery uses Brevo's HTTPS email API (works on hosts that block SMTP), or a
+// global SMTP server; if neither is configured the email is logged to the
+// console instead, so local development works out of the box.
 import nodemailer from 'nodemailer';
 import config from '../config/env.js';
 
@@ -19,32 +19,15 @@ if (config.smtp.host && config.smtp.user) {
   });
 }
 
-// Brevo/SendGrid need a verified sender email; only usable with MAIL_FROM set.
-const hasResend = Boolean(config.resend.apiKey);
+// Brevo needs a verified sender email; it's only usable with MAIL_FROM set.
 const hasBrevo = Boolean(config.brevo.apiKey && config.mailFrom);
-const hasSendgrid = Boolean(config.sendgrid.apiKey && config.mailFrom);
 
 /**
- * True when the server can send email — i.e. Resend, Brevo, SendGrid, or a
- * global SMTP transporter is configured. The client uses this to know
- * notifications will work.
+ * True when the server can send email — i.e. Brevo or a global SMTP transporter
+ * is configured. The client uses this to know notifications will work.
  */
 export function serverEmailReady() {
-  return Boolean(hasResend || hasBrevo || hasSendgrid || globalTransporter);
-}
-
-/** Which transport a given send should use, honouring EMAIL_PROVIDER. */
-function chooseProvider() {
-  const pref = config.emailProvider;
-  if (pref === 'resend' && hasResend) return 'resend';
-  if (pref === 'brevo' && hasBrevo) return 'brevo';
-  if (pref === 'sendgrid' && hasSendgrid) return 'sendgrid';
-  if (pref === 'smtp') return 'smtp';
-  // auto (or a preferred provider that isn't configured): first available.
-  if (hasResend) return 'resend';
-  if (hasBrevo) return 'brevo';
-  if (hasSendgrid) return 'sendgrid';
-  return 'smtp';
+  return Boolean(hasBrevo || globalTransporter);
 }
 
 /** Parse a "Name <email>" (or bare "email") string into { name, email }. */
@@ -54,37 +37,6 @@ function parseFrom(str) {
     return { name: m[1].replace(/^"|"$/g, '').trim() || 'Inventory Tracker', email: m[2].trim() };
   }
   return { name: 'Inventory Tracker', email: (str || '').trim() };
-}
-
-/** Send one email via Resend's HTTPS API (works on hosts that block SMTP). */
-async function sendViaResend({ to, subject, text, html }) {
-  let res;
-  try {
-    res = await fetch(config.resend.apiUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.resend.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ from: config.resend.from, to, subject, text, html }),
-    });
-  } catch (netErr) {
-    const err = new Error(`Could not reach the Resend API: ${netErr.message}`);
-    err.code = 'ERESEND';
-    err.status = 0;
-    err.detail = netErr.message;
-    throw err;
-  }
-  if (!res.ok) {
-    let detail = '';
-    try { detail = JSON.stringify(await res.json()); }
-    catch { detail = await res.text().catch(() => ''); }
-    const err = new Error(`Resend ${res.status}: ${detail}`);
-    err.code = 'ERESEND';
-    err.status = res.status;
-    err.detail = detail;
-    throw err;
-  }
 }
 
 /** Send one email via Brevo's HTTPS API (single verified sender → any recipient). */
@@ -125,64 +77,14 @@ async function sendViaBrevo({ to, subject, text, html }) {
   }
 }
 
-/** Send one email via SendGrid's HTTPS API (single verified sender → any recipient). */
-async function sendViaSendgrid({ to, subject, text, html }) {
-  const from = parseFrom(config.mailFrom);
-  let res;
-  try {
-    res = await fetch(config.sendgrid.apiUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.sendgrid.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: to }] }],
-        from,
-        subject,
-        content: [
-          { type: 'text/plain', value: text },
-          ...(html ? [{ type: 'text/html', value: html }] : []),
-        ],
-      }),
-    });
-  } catch (netErr) {
-    const err = new Error(`Could not reach the SendGrid API: ${netErr.message}`);
-    err.code = 'ESENDGRID';
-    err.status = 0;
-    err.detail = netErr.message;
-    throw err;
-  }
-  if (!res.ok) {
-    let detail = '';
-    try { detail = JSON.stringify(await res.json()); }
-    catch { detail = await res.text().catch(() => ''); }
-    const err = new Error(`SendGrid ${res.status}: ${detail}`);
-    err.code = 'ESENDGRID';
-    err.status = res.status;
-    err.detail = detail;
-    throw err;
-  }
-}
-
 /**
- * Deliver an email through the best available transport, in priority order
- * (see chooseProvider): Resend / Brevo / SendGrid (HTTP APIs that work where
- * SMTP is blocked), else a global SMTP transporter, else a console-log fallback.
+ * Deliver an email: Brevo's HTTP API when configured (works where SMTP is
+ * blocked), else a global SMTP transporter, else a console-log dev fallback.
  */
 async function deliver({ to, subject, text, html }) {
-  const provider = chooseProvider();
-  if (provider === 'resend') {
-    await sendViaResend({ to, subject, text, html });
-    return { delivered: true, via: 'resend' };
-  }
-  if (provider === 'brevo') {
+  if (hasBrevo) {
     await sendViaBrevo({ to, subject, text, html });
     return { delivered: true, via: 'brevo' };
-  }
-  if (provider === 'sendgrid') {
-    await sendViaSendgrid({ to, subject, text, html });
-    return { delivered: true, via: 'sendgrid' };
   }
 
   if (!globalTransporter) {
@@ -204,42 +106,16 @@ async function deliver({ to, subject, text, html }) {
 export function describeSmtpError(err) {
   const code = err?.code;
   const resp = err?.response || err?.message || '';
-  // SendGrid (HTTP API) errors.
-  if (code === 'ESENDGRID') {
-    if (err.status === 0) {
-      return "Couldn't reach the SendGrid email API. Check the server's network access to api.sendgrid.com.";
-    }
-    if (err.status === 401) {
-      return 'Your SendGrid API key was rejected. Check SENDGRID_API_KEY on the server.';
-    }
-    if (err.status === 403 || /verified Sender Identity|does not match a verified/i.test(err.detail || '')) {
-      return 'SendGrid rejected the sender. In SendGrid, verify your MAIL_FROM address under Settings → Sender Authentication → Single Sender Verification, then try again.';
-    }
-    return `Email API error: ${err.detail || err.message}`;
-  }
   // Brevo (HTTP API) errors.
   if (code === 'EBREVO') {
     if (err.status === 0) {
       return "Couldn't reach the Brevo email API. Check the server's network access to api.brevo.com.";
     }
     if (err.status === 401) {
-      return 'Your Brevo API key was rejected. Check BREVO_API_KEY on the server.';
+      return 'Your Brevo API key was rejected. Use a Brevo v3 API key (SMTP & API → API Keys — not the SMTP password) as BREVO_API_KEY.';
     }
     if (/sender|not valid|not been validated|activate/i.test(err.detail || '')) {
       return 'Brevo rejected the sender. In Brevo, add and verify your MAIL_FROM address under Senders, Domains & Dedicated IPs → Senders, then try again.';
-    }
-    return `Email API error: ${err.detail || err.message}`;
-  }
-  // Resend (HTTP API) errors.
-  if (code === 'ERESEND') {
-    if (err.status === 0) {
-      return "Couldn't reach the Resend email API. Check the server's network access to api.resend.com.";
-    }
-    if (err.status === 401 || err.status === 403) {
-      return 'Your Resend API key was rejected. Check RESEND_API_KEY on the server.';
-    }
-    if (err.status === 422 || /domain|not verified|only send testing|testing emails/i.test(err.detail || '')) {
-      return 'Resend accepted the request but not this recipient. While your domain is unverified, Resend only delivers to your own Resend account email — verify a domain in Resend to send to any address.';
     }
     return `Email API error: ${err.detail || err.message}`;
   }
@@ -247,7 +123,7 @@ export function describeSmtpError(err) {
     return 'The SMTP server rejected the username or password. Check your SMTP_USER / SMTP_PASS.';
   }
   if (['ETIMEDOUT', 'ESOCKET', 'ECONNECTION', 'ECONNREFUSED', 'EDNS'].includes(code)) {
-    return "Couldn't reach the SMTP server. The host may block outbound SMTP (common on free hosting) — set BREVO_API_KEY or RESEND_API_KEY to send over HTTPS instead.";
+    return "Couldn't reach the SMTP server. The host may block outbound SMTP (common on free hosting) — set BREVO_API_KEY to send over HTTPS instead.";
   }
   return err?.message || 'Unknown email error.';
 }
