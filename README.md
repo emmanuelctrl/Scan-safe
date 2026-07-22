@@ -147,9 +147,6 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `JWT_SECRET` | ✅ | Long random string used to sign login tokens. |
 | `JWT_EXPIRES_IN` | – | Session lifetime (default `7d`). |
 | `BREVO_API_KEY` | – | Enables notification emails via [Brevo](https://brevo.com)'s HTTPS API — email any recipient on an SMTP-blocked host (verify one sender, no domain). Requires `MAIL_FROM` set to the verified sender. |
-| `SENDGRID_API_KEY` | – | Enables notification emails via [SendGrid](https://sendgrid.com)'s HTTPS API — email any recipient (verify a single sender, no domain). Requires `MAIL_FROM` set to the verified sender. |
-| `RESEND_API_KEY` | – | Enables sending notification emails via [Resend](https://resend.com)'s HTTPS API. Needs a verified domain to reach arbitrary recipients. |
-| `EMAIL_PROVIDER` | – | Which transport to prefer when several are set: `brevo`, `sendgrid`, `resend`, `smtp`, or `auto` (default). |
 | `DEFAULT_OWNER_PIN` | – | PIN assigned to each new account (default `123456`). |
 | `ADMIN_PASSWORD` | – | Password for the app-wide Super Admin panel at `/admin` (default `0703`). Change this before deploying publicly. |
 | `DATABASE_PATH` | – | Local SQLite file path used in dev when no Turso URL is set (default `./data/inventory.sqlite`). |
@@ -162,26 +159,20 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 If SMTP is left blank, notification emails are **logged to the server console**
 instead of being sent — handy for local development.
 
-**Email over HTTPS — recommended for hosts that block SMTP.** Many free hosting
-tiers (e.g. Render free) block outbound SMTP, so Gmail/SMTP can't connect. Use
-an HTTP email API instead (port 443, never blocked); it's used for all accounts
-and takes priority over SMTP.
+**Email over HTTPS (Brevo) — recommended for hosts that block SMTP.** Many free
+hosting tiers (e.g. Render free) block outbound SMTP, so Gmail/SMTP can't
+connect. [Brevo](https://brevo.com) sends over HTTPS (port 443, never blocked)
+and, once configured, is used for all notifications. It can email **any
+recipient** after verifying just one sender — no domain needed:
 
-- **[Brevo](https://brevo.com) — send to any recipient, no domain needed.**
-  Verify a single sender email (Senders, Domains & Dedicated IPs → **Senders**),
-  create an API key, then set **`BREVO_API_KEY`** and **`MAIL_FROM`** to that
-  exact verified sender (e.g. `Inventory Tracker <you@gmail.com>`).
-- **[SendGrid](https://sendgrid.com) — send to any recipient, no domain needed.**
-  Verify a single sender (Settings → Sender Authentication → **Single Sender
-  Verification**), create an API key (Settings → API Keys), then set
-  **`SENDGRID_API_KEY`** and **`MAIL_FROM`** to that verified sender.
-- **[Resend](https://resend.com) — alternative.** Set **`RESEND_API_KEY`**. To
-  send to arbitrary addresses you must verify a sending domain; until then its
-  test sender only delivers to your own Resend account email.
+1. Sign up at [brevo.com](https://brevo.com).
+2. Verify a single sender: **Senders, Domains & Dedicated IPs → Senders → Add a
+   sender**, then click the confirmation link Brevo emails you.
+3. Create a **v3 API key**: **SMTP & API → API Keys → Generate a new API key**
+   (this is *not* the SMTP password).
+4. Set **`BREVO_API_KEY`** to that key and **`MAIL_FROM`** to the exact verified
+   sender (e.g. `Inventory Tracker <you@gmail.com>`), then redeploy.
 
-If more than one is configured, set `EMAIL_PROVIDER` (`brevo` | `sendgrid` |
-`resend` | `smtp`) to choose; the default `auto` prefers Resend, then Brevo,
-then SendGrid, then SMTP.
 Once configured, use the **Send test email** button in **Owner Portal →
 Settings → Checkout notifications** to confirm delivery — it reports the exact
 reason if the provider rejects the send.

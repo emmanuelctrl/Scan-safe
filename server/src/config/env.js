@@ -69,39 +69,18 @@ const config = {
     from: process.env.MAIL_FROM || 'Inventory Tracker <no-reply@example.com>',
   },
 
-  // The address notifications are sent "from". For Brevo this MUST be an email
-  // you've verified as a sender; for Resend it must be on a verified domain.
+  // The address notifications are sent "from". MUST be an email you've verified
+  // as a sender in Brevo (Senders → add a sender → click the confirmation link).
   mailFrom: process.env.MAIL_FROM || '',
 
-  // Which email transport to use when more than one is configured.
-  // 'auto' (default) picks the first available: Resend → Brevo → SMTP.
-  emailProvider: (process.env.EMAIL_PROVIDER || 'auto').toLowerCase(),
-
-  // Resend (https://resend.com) — HTTP email API over HTTPS, so it works even
-  // on hosts that block outbound SMTP. Sends to arbitrary recipients only after
-  // you verify a sending domain (its test sender is limited to your own email).
-  resend: {
-    apiKey: process.env.RESEND_API_KEY || '',
-    from: process.env.MAIL_FROM || 'Inventory Tracker <onboarding@resend.dev>',
-    apiUrl: process.env.RESEND_API_URL || 'https://api.resend.com/emails',
-  },
-
-  // Brevo (https://brevo.com) — HTTP email API over HTTPS. Unlike Resend it can
-  // send to any recipient after verifying just a SINGLE sender email (no domain
-  // needed), so it's the simplest way to email various store owners. Requires
-  // BREVO_API_KEY + MAIL_FROM set to your verified sender address.
+  // Brevo (https://brevo.com) — HTTP email API over HTTPS, so it works even on
+  // hosts that block outbound SMTP (Render free tier, etc.). It can email any
+  // recipient after verifying just a SINGLE sender email — no domain needed.
+  // Requires BREVO_API_KEY (a v3 API key, not the SMTP key) + MAIL_FROM set to
+  // that verified sender address.
   brevo: {
     apiKey: process.env.BREVO_API_KEY || '',
     apiUrl: process.env.BREVO_API_URL || 'https://api.brevo.com/v3/smtp/email',
-  },
-
-  // SendGrid (https://sendgrid.com) — HTTP email API over HTTPS. Also sends to
-  // any recipient after verifying a single sender (Sender Authentication →
-  // Single Sender Verification, no domain needed). Requires SENDGRID_API_KEY +
-  // MAIL_FROM set to your verified sender address.
-  sendgrid: {
-    apiKey: process.env.SENDGRID_API_KEY || '',
-    apiUrl: process.env.SENDGRID_API_URL || 'https://api.sendgrid.com/v3/mail/send',
   },
 };
 
