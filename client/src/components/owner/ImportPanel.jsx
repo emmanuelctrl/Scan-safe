@@ -45,8 +45,8 @@ export default function ImportPanel({ onImported }) {
       <p className="muted">
         {t('importIntro1')} <code>barcode</code>, <code>name</code>.{' '}
         {t('importIntro2')}
-        <code> price</code>, <code>quantity</code>, <code>low_stock_at</code>,
-        <code> sku</code>, <code>category</code>.
+        <code> price</code>, <code>cost_price</code>, <code>quantity</code>,
+        <code> low_stock_at</code>, <code>category</code>.
       </p>
 
       <div className="import__controls">

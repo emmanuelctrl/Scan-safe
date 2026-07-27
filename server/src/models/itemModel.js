@@ -47,18 +47,18 @@ export const ItemModel = {
     return get('SELECT * FROM items WHERE barcode = ? AND user_id = ?', [barcode, userId]);
   },
 
-  async create(userId, { barcode, name, price, quantity, low_stock_at, category }) {
+  async create(userId, { barcode, name, price, cost_price, quantity, low_stock_at, category }) {
     const info = await run(
-      `INSERT INTO items (user_id, barcode, name, price, quantity, low_stock_at, category)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [userId, barcode, name, price, quantity, low_stock_at ?? 2, category || null]
+      `INSERT INTO items (user_id, barcode, name, price, cost_price, quantity, low_stock_at, category)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, barcode, name, price, cost_price ?? 0, quantity, low_stock_at ?? 2, category || null]
     );
     return this.findById(userId, info.lastInsertRowid);
   },
 
   /** Update only the provided fields; leaves others untouched. */
   async update(userId, id, fields) {
-    const allowed = ['barcode', 'name', 'price', 'quantity', 'low_stock_at', 'category'];
+    const allowed = ['barcode', 'name', 'price', 'cost_price', 'quantity', 'low_stock_at', 'category'];
     const keys = Object.keys(fields).filter((k) => allowed.includes(k));
     if (keys.length === 0) return this.findById(userId, id);
 
@@ -117,18 +117,19 @@ export const ItemModel = {
         );
         if (existing) {
           await tx.run(
-            `UPDATE items SET name = ?, price = ?, quantity = ?, low_stock_at = ?,
+            `UPDATE items SET name = ?, price = ?, cost_price = ?, quantity = ?, low_stock_at = ?,
                               category = ?, updated_at = datetime('now')
              WHERE id = ? AND user_id = ?`,
-            [r.name, r.price, r.quantity, r.low_stock_at ?? 2, r.category || null,
+            [r.name, r.price, r.cost_price ?? 0, r.quantity, r.low_stock_at ?? 2, r.category || null,
              existing.id, userId]
           );
           updated += 1;
         } else {
           await tx.run(
-            `INSERT INTO items (user_id, barcode, name, price, quantity, low_stock_at, category)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [userId, r.barcode, r.name, r.price, r.quantity, r.low_stock_at ?? 2, r.category || null]
+            `INSERT INTO items (user_id, barcode, name, price, cost_price, quantity, low_stock_at, category)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [userId, r.barcode, r.name, r.price, r.cost_price ?? 0, r.quantity, r.low_stock_at ?? 2,
+             r.category || null]
           );
           inserted += 1;
         }

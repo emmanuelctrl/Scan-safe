@@ -15,13 +15,13 @@ const DEMO_USER = {
 };
 
 const SAMPLE_ITEMS = [
-  { barcode: '0001112223334', name: 'Silk Scarf', price: 45.0, quantity: 12, low_stock_at: 5, category: 'Accessories' },
-  { barcode: '0001112223335', name: 'Leather Handbag', price: 189.99, quantity: 3, low_stock_at: 4, category: 'Bags' },
-  { barcode: '0001112223336', name: 'Cotton T-Shirt', price: 24.5, quantity: 0, low_stock_at: 6, category: 'Apparel' },
-  { barcode: '0001112223337', name: 'Wool Beanie', price: 19.99, quantity: 25, low_stock_at: 8, category: 'Accessories' },
-  { barcode: '0001112223338', name: 'Denim Jacket', price: 89.0, quantity: 2, low_stock_at: 3, category: 'Apparel' },
-  { barcode: '0001112223342', name: 'Leather Loafers', price: 120.0, quantity: 6, low_stock_at: 3, category: 'Shoes' },
-  { barcode: '0001112223343', name: 'Running Sneakers', price: 95.0, quantity: 10, low_stock_at: 4, category: 'Shoes' },
+  { barcode: '0001112223334', name: 'Silk Scarf', price: 45.0, cost_price: 20.0, quantity: 12, low_stock_at: 5, category: 'Accessories' },
+  { barcode: '0001112223335', name: 'Leather Handbag', price: 189.99, cost_price: 95.0, quantity: 3, low_stock_at: 4, category: 'Bags' },
+  { barcode: '0001112223336', name: 'Cotton T-Shirt', price: 24.5, cost_price: 9.0, quantity: 0, low_stock_at: 6, category: 'Apparel' },
+  { barcode: '0001112223337', name: 'Wool Beanie', price: 19.99, cost_price: 7.5, quantity: 25, low_stock_at: 8, category: 'Accessories' },
+  { barcode: '0001112223338', name: 'Denim Jacket', price: 89.0, cost_price: 42.0, quantity: 2, low_stock_at: 3, category: 'Apparel' },
+  { barcode: '0001112223342', name: 'Leather Loafers', price: 120.0, cost_price: 62.0, quantity: 6, low_stock_at: 3, category: 'Shoes' },
+  { barcode: '0001112223343', name: 'Running Sneakers', price: 95.0, cost_price: 48.0, quantity: 10, low_stock_at: 4, category: 'Shoes' },
 ];
 
 async function run() {
