@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import { useLang } from '../../context/LanguageContext.jsx';
+import SalesHistory from './SalesHistory.jsx';
 
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 
@@ -32,6 +33,7 @@ export default function DashboardTab({ refreshKey }) {
       {/* Summary stat cards */}
       <div className="stats">
         <StatCard label={t('salesToday')} value={salesToday.count} sub={money(salesToday.revenue)} accent="indigo" />
+        <StatCard label={t('profitToday')} value={money(salesToday.profit ?? 0)} accent="green" />
         <StatCard label={t('unitsSoldToday')} value={salesToday.units} accent="green" />
         <StatCard label={t('stockAddedToday')} value={stockToday?.units ?? 0} sub={t('restockCount', { n: stockToday?.count ?? 0 })} accent="blue" />
         <StatCard label={t('totalItems')} value={inventory.totalItems} sub={t('unitsCount', { n: inventory.totalUnits })} accent="blue" />
@@ -136,6 +138,9 @@ export default function DashboardTab({ refreshKey }) {
           </div>
         )}
       </section>
+
+      {/* Full sales history, searchable by date, with profit */}
+      <SalesHistory refreshKey={refreshKey} />
     </div>
   );
 }

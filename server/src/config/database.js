@@ -106,6 +106,7 @@ const SCHEMA_SQL = `
     barcode        TEXT NOT NULL,
     name           TEXT NOT NULL,
     price          REAL NOT NULL DEFAULT 0 CHECK (price >= 0),
+    cost_price     REAL NOT NULL DEFAULT 0 CHECK (cost_price >= 0),
     quantity       INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
     low_stock_at   INTEGER NOT NULL DEFAULT 2 CHECK (low_stock_at >= 0),
     category       TEXT,
@@ -125,6 +126,7 @@ const SCHEMA_SQL = `
     barcode      TEXT NOT NULL,
     item_name    TEXT NOT NULL,
     unit_price   REAL NOT NULL DEFAULT 0,
+    unit_cost    REAL NOT NULL DEFAULT 0,
     quantity     INTEGER NOT NULL DEFAULT 1,
     action       TEXT NOT NULL DEFAULT 'checkout' CHECK (action IN ('scan','checkout')),
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
@@ -164,6 +166,15 @@ async function migrate() {
   const itemNames = new Set(itemCols.map((c) => c.name));
   if (!itemNames.has('category')) {
     await base.run(`ALTER TABLE items ADD COLUMN category TEXT`);
+  }
+  if (!itemNames.has('cost_price')) {
+    await base.run(`ALTER TABLE items ADD COLUMN cost_price REAL NOT NULL DEFAULT 0`);
+  }
+
+  const scanCols = await base.all(`PRAGMA table_info(scans)`);
+  const scanNames = new Set(scanCols.map((c) => c.name));
+  if (!scanNames.has('unit_cost')) {
+    await base.run(`ALTER TABLE scans ADD COLUMN unit_cost REAL NOT NULL DEFAULT 0`);
   }
 }
 

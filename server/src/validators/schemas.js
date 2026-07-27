@@ -27,6 +27,7 @@ export const itemSchema = z.object({
   barcode: z.string().trim().min(1, 'Barcode is required.').max(64),
   name: z.string().trim().min(1, 'Name is required.').max(120),
   price: z.coerce.number().min(0, 'Price cannot be negative.'),
+  cost_price: z.coerce.number().min(0, 'Cost price cannot be negative.').default(0),
   quantity: z.coerce.number().int().min(0, 'Quantity cannot be negative.'),
   low_stock_at: z.coerce.number().int().min(0).default(2),
   category: z.string().trim().max(64).optional(),

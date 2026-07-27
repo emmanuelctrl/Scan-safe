@@ -17,8 +17,12 @@ const HEADER_ALIASES = {
   name: 'name', item: 'name', itemname: 'name', product: 'name',
   productname: 'name', description: 'name', title: 'name',
 
-  price: 'price', unitprice: 'price', cost: 'price', sellingprice: 'price',
-  amount: 'price', retail: 'price',
+  price: 'price', unitprice: 'price', sellingprice: 'price', sellprice: 'price',
+  amount: 'price', retail: 'price', retailprice: 'price',
+
+  costprice: 'cost_price', cost: 'cost_price', buyprice: 'cost_price',
+  buyingprice: 'cost_price', purchaseprice: 'cost_price', wholesale: 'cost_price',
+  wholesaleprice: 'cost_price', unitcost: 'cost_price', costeach: 'cost_price',
 
   quantity: 'quantity', qty: 'quantity', stock: 'quantity', count: 'quantity',
   instock: 'quantity', onhand: 'quantity',
@@ -128,6 +132,7 @@ export async function parseInventoryFile(buffer, filename) {
       barcode: String(raw.barcode ?? '').trim(),
       name: String(raw.name ?? '').trim(),
       price: cleanNumber(raw.price ?? 0) ?? 0,
+      cost_price: cleanNumber(raw.cost_price ?? 0) ?? 0,
       quantity: cleanNumber(raw.quantity ?? 0) ?? 0,
       low_stock_at: cleanNumber(raw.low_stock_at ?? 2) ?? 2,
       category: raw.category ? String(raw.category).trim() : undefined,

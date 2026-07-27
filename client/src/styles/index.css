@@ -637,6 +637,15 @@ input[type='file']::file-selector-button:hover { background: var(--surface-3); }
 .pick-list__name { font-weight: 600; }
 .pick-list__meta { font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; }
 
+/* ── Sales history (date filter + totals) ─────────────────────── */
+.sales-filter {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.sales-filter .field { flex: 0 0 auto; }
+.sales-filter input[type='date'] { width: auto; }
+.sales-totals { margin-bottom: 1rem; }
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -665,7 +674,7 @@ input[type='file']::file-selector-button:hover { background: var(--surface-3); }
 /* ── Item / import forms ────────────────────────────────────── */
 .item-form {
   display: grid;
-  grid-template-columns: repeat(6, 1fr) auto;
+  grid-template-columns: repeat(7, 1fr) auto;
   gap: 0.5rem; align-items: center;
 }
 @media (max-width: 900px) { .item-form { grid-template-columns: 1fr 1fr; } }

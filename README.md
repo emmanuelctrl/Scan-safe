@@ -191,10 +191,16 @@ In **Owner Portal → Inventory → Import from Excel / CSV**, upload a `.xlsx`,
 `.xls`, or `.csv` file. The moment it's uploaded it becomes your inventory.
 
 - **Required columns:** `barcode`, `name`
-- **Optional columns:** `price`, `quantity`, `low_stock_at`, `category`
+- **Optional columns:** `price` (selling price), `cost_price`, `quantity`,
+  `low_stock_at`, `category`
 - Headers are matched flexibly and case-insensitively. Common aliases work too,
   e.g. `UPC`/`EAN`/`code` → barcode, `Product`/`Item` → name, `Qty`/`Stock` →
-  quantity, `Reorder`/`Threshold` → low_stock_at.
+  quantity, `Reorder`/`Threshold` → low_stock_at, and
+  `Cost`/`Buy price`/`Wholesale` → cost_price.
+- **Profit** is tracked automatically: `price` is the selling price and
+  `cost_price` is what you paid. Each sale records the cost at that moment, so
+  the owner dashboard's **Sales history** shows profit (revenue − cost) per sale
+  and in total, searchable by date.
 - **Replace existing inventory** wipes current items first (spreadsheet becomes
   the single source of truth). Unchecked, rows are merged by barcode (existing
   items updated, new ones added).
@@ -220,7 +226,8 @@ obtained by verifying the PIN at `POST /api/owner/unlock`.
 | `POST` | `/api/scan` | login | Scan/checkout a barcode (emails owner) |
 | `GET`  | `/api/scan/lookup/:barcode` | login | Preview an item |
 | `POST` | `/api/owner/unlock` | login | Verify PIN → owner token |
-| `GET`  | `/api/owner/dashboard` | owner | Stock health + today's sales |
+| `GET`  | `/api/owner/dashboard` | owner | Stock health + today's sales & profit |
+| `GET`  | `/api/owner/sales?from=&to=` | owner | Sales history (date-filterable) with profit |
 | `GET`/`POST` | `/api/owner/items` | owner | List / add items |
 | `POST` | `/api/owner/items/import` | owner | Upload spreadsheet |
 | `PATCH`/`DELETE` | `/api/owner/items/:id` | owner | Edit / delete item |

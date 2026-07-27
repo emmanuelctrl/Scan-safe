@@ -45,7 +45,8 @@ router.post(
     const updatedItem =
       action === 'checkout' ? await ItemModel.decrementStock(userId, item.id, quantity) : item;
 
-    // Record the immutable ledger entry.
+    // Record the immutable ledger entry, snapshotting the item's cost so
+    // profit stays accurate even if the cost is edited later.
     await ScanModel.create({
       userId,
       item: updatedItem,
@@ -53,6 +54,7 @@ router.post(
       action,
       quantity,
       unitPrice,
+      unitCost: item.cost_price ?? 0,
     });
 
     // Notify the owner. Email failures must NOT fail the scan, so we catch them.

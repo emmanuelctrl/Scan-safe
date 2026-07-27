@@ -78,6 +78,8 @@ router.get(
         count: sales.count,
         units: sales.units,
         revenue: sales.revenue,
+        cost: sales.cost,
+        profit: sales.profit,
         items: sales.rows,
       },
       stockToday: {
@@ -86,6 +88,28 @@ router.get(
         items: stockIn.rows,
       },
       recentActivity: recent,
+    });
+  })
+);
+
+// GET /api/owner/sales?from=YYYY-MM-DD&to=YYYY-MM-DD — full sales history,
+// optionally filtered to a date range, with revenue / cost / profit totals.
+router.get(
+  '/sales',
+  asyncHandler(async (req, res) => {
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const from = dateRe.test(String(req.query.from || '')) ? req.query.from : undefined;
+    const to = dateRe.test(String(req.query.to || '')) ? req.query.to : undefined;
+    const sales = await ScanModel.salesHistory(req.user.id, { from, to });
+    res.json({
+      from: from || null,
+      to: to || null,
+      count: sales.count,
+      units: sales.units,
+      revenue: sales.revenue,
+      cost: sales.cost,
+      profit: sales.profit,
+      items: sales.rows,
     });
   })
 );
