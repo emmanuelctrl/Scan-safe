@@ -5,7 +5,7 @@
 // create their default settings row (owner PIN + notification email + theme)
 // inside a single transaction so an account is never left half-initialised.
 import bcrypt from 'bcryptjs';
-import { get, withTransaction } from '../config/database.js';
+import { get, all, run, withTransaction } from '../config/database.js';
 import config from '../config/env.js';
 
 const SALT_ROUNDS = 10;
@@ -47,6 +47,36 @@ export const UserModel = {
   /** Compare a plaintext password against the stored hash. */
   verifyPassword(user, password) {
     return bcrypt.compareSync(password, user.password_hash);
+  },
+
+  /** Link a user's account to their Telegram chat for sale notifications. */
+  linkTelegram(userId, chatId) {
+    return run(
+      `UPDATE users SET telegram_chat_id = ?, telegram_linked_at = datetime('now') WHERE id = ?`,
+      [chatId, userId]
+    );
+  },
+
+  /**
+   * Unlink whichever account is bound to a Telegram chat id. Called when
+   * Telegram reports the user blocked the bot (HTTP 403).
+   */
+  unlinkTelegramByChatId(chatId) {
+    return run('UPDATE users SET telegram_chat_id = NULL WHERE telegram_chat_id = ?', [chatId]);
+  },
+
+  /**
+   * Owners of a store who have linked Telegram, for sale-notification fan-out.
+   * A store is identified by its user id — each account owns exactly one store —
+   * so scoping by that id makes it impossible to notify another store's owner.
+   */
+  findTelegramOwnersForStore(storeUserId) {
+    return all(
+      `SELECT id, telegram_chat_id, sale_notifications, sale_notification_threshold
+       FROM users
+       WHERE id = ? AND telegram_chat_id IS NOT NULL`,
+      [storeUserId]
+    );
   },
 
   /** Strip sensitive fields before sending a user to the client. */

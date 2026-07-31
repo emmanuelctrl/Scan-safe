@@ -42,6 +42,11 @@ const config = {
   // one store's Owner PIN. Override with ADMIN_PASSWORD in production.
   adminPassword: process.env.ADMIN_PASSWORD || '0703',
 
+  // Telegram bot token for sale notifications. Read from the environment only —
+  // never hardcode it; it must never reach the frontend, a response, or a log.
+  // When empty, Telegram notifications are simply disabled.
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
+
   // Local file path used when no remote (Turso) database is configured.
   databasePath: path.isAbsolute(process.env.DATABASE_PATH || '')
     ? process.env.DATABASE_PATH

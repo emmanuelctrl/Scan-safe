@@ -43,3 +43,7 @@ services:
       # MAIL_FROM to that verified sender address.
       - key: BREVO_API_KEY
         sync: false
+      # Telegram bot token (@BotFather) for sale notifications. Leave unset to
+      # disable. Must never be exposed to the frontend.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false

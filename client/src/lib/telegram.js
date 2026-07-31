@@ -4,9 +4,30 @@
 // (not inside Telegram) `window.Telegram` is undefined and every helper
 // becomes a no-op, so the app works exactly as before outside Telegram.
 import { useEffect } from 'react';
+import { api } from '../api/client.js';
 
 export function getTelegramWebApp() {
   return typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined;
+}
+
+// Only attempt the (silent) Telegram link once per page load.
+let telegramLinkAttempted = false;
+
+/**
+ * If the app is running inside Telegram, silently bind the logged-in account to
+ * the Telegram chat so the owner gets sale notifications. No UI, no retry,
+ * failures ignored — call once after login. No-op in a normal browser.
+ */
+export async function linkTelegramAccount() {
+  if (telegramLinkAttempted) return;
+  const initData = getTelegramWebApp()?.initData;
+  if (!initData) return;
+  telegramLinkAttempted = true;
+  try {
+    await api('/api/telegram/link', { method: 'POST', body: { initData } });
+  } catch {
+    /* silent: linking is best-effort */
+  }
 }
 
 /** Call once on app start. Expands the app to full height and reports readiness. */

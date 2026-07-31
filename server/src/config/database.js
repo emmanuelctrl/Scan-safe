@@ -89,8 +89,16 @@ const SCHEMA_SQL = `
     password_hash TEXT NOT NULL,
     name          TEXT,
     role          TEXT NOT NULL DEFAULT 'worker' CHECK (role IN ('worker','owner')),
+    -- Telegram Mini App sale notifications (linked automatically inside Telegram).
+    telegram_chat_id            TEXT DEFAULT NULL,
+    telegram_linked_at          TEXT DEFAULT NULL,
+    sale_notifications          TEXT NOT NULL DEFAULT 'instant'
+                                CHECK (sale_notifications IN ('instant','threshold','daily')),
+    sale_notification_threshold REAL NOT NULL DEFAULT 0,
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE INDEX IF NOT EXISTS idx_users_telegram_chat_id ON users (telegram_chat_id);
 
   CREATE TABLE IF NOT EXISTS settings (
     user_id            INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -162,6 +170,23 @@ export async function initDatabase() {
  * added later must be applied with ALTER TABLE here.
  */
 async function migrate() {
+  // Telegram sale-notification columns on users (added after initial release).
+  const userCols = await base.all(`PRAGMA table_info(users)`);
+  const userNames = new Set(userCols.map((c) => c.name));
+  if (!userNames.has('telegram_chat_id')) {
+    await base.run(`ALTER TABLE users ADD COLUMN telegram_chat_id TEXT DEFAULT NULL`);
+  }
+  if (!userNames.has('telegram_linked_at')) {
+    await base.run(`ALTER TABLE users ADD COLUMN telegram_linked_at TEXT DEFAULT NULL`);
+  }
+  if (!userNames.has('sale_notifications')) {
+    await base.run(`ALTER TABLE users ADD COLUMN sale_notifications TEXT NOT NULL DEFAULT 'instant'`);
+  }
+  if (!userNames.has('sale_notification_threshold')) {
+    await base.run(`ALTER TABLE users ADD COLUMN sale_notification_threshold REAL NOT NULL DEFAULT 0`);
+  }
+  await base.run(`CREATE INDEX IF NOT EXISTS idx_users_telegram_chat_id ON users (telegram_chat_id)`);
+
   const itemCols = await base.all(`PRAGMA table_info(items)`);
   const itemNames = new Set(itemCols.map((c) => c.name));
   if (!itemNames.has('category')) {

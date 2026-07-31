@@ -8,6 +8,7 @@ import { ItemModel } from '../models/itemModel.js';
 import { ScanModel } from '../models/scanModel.js';
 import { SettingsModel } from '../models/settingsModel.js';
 import { sendScanNotification, describeSmtpError } from '../services/emailService.js';
+import { notifySale } from '../services/telegram.js';
 import { scanSchema } from '../validators/schemas.js';
 import { validate } from '../utils/validate.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -81,6 +82,20 @@ router.post(
       sale: { quantity, unitPrice, total: unitPrice * quantity },
       notification,
     });
+
+    // Fire-and-forget Telegram notification to the store owner, AFTER the
+    // response. notifySale never throws, but guard anyway so a rejected
+    // promise can't surface as an unhandled rejection.
+    if (action === 'checkout') {
+      const total = unitPrice * quantity;
+      notifySale({
+        userId, // the store — scopes the fan-out; never leaks across stores
+        items: [{ name: updatedItem.name, qty: quantity, subtotal: total }],
+        total,
+        worker: req.user.email,
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
+    }
   })
 );
 

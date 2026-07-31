@@ -2,6 +2,7 @@
 // login / register / logout actions used across the app.
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { api, tokenStore } from '../api/client.js';
+import { linkTelegramAccount } from '../lib/telegram.js';
 
 const AuthContext = createContext(null);
 
@@ -16,6 +17,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (user) localStorage.setItem('it_user', JSON.stringify(user));
     else localStorage.removeItem('it_user');
+  }, [user]);
+
+  // Once logged in inside Telegram, silently link the account for sale
+  // notifications (no-op in a normal browser; runs at most once per load).
+  useEffect(() => {
+    if (user) linkTelegramAccount();
   }, [user]);
 
   async function login(email, password) {
