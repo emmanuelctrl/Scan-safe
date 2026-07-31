@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes.js';
 import scanRoutes from './routes/scanRoutes.js';
 import ownerRoutes from './routes/ownerRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import telegramRoutes from './routes/telegramRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/scan', scanRoutes);
 app.use('/api/owner', ownerRoutes);
 app.use('/api/admin', authLimiter, adminRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // ── 404 + central error handler (must be last) ────────────────────────────
 app.use(notFound);

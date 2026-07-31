@@ -149,6 +149,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `BREVO_API_KEY` | – | Enables notification emails via [Brevo](https://brevo.com)'s HTTPS API — email any recipient on an SMTP-blocked host (verify one sender, no domain). Requires `MAIL_FROM` set to the verified sender. |
 | `DEFAULT_OWNER_PIN` | – | PIN assigned to each new account (default `123456`). |
 | `ADMIN_PASSWORD` | – | Password for the app-wide Super Admin panel at `/admin` (default `0703`). Change this before deploying publicly. |
+| `TELEGRAM_BOT_TOKEN` | – | Bot token (@BotFather) for Telegram sale notifications. When set, completing a sale messages the store owner on Telegram (auto-linked inside the Mini App). Leave unset to disable. Server-only — never exposed to the frontend. |
 | `DATABASE_PATH` | – | Local SQLite file path used in dev when no Turso URL is set (default `./data/inventory.sqlite`). |
 | `TURSO_DATABASE_URL` | ✅ (prod) | Hosted libSQL/Turso URL (`libsql://...`). Required in production for durable storage. |
 | `TURSO_AUTH_TOKEN` | ✅ (prod) | Auth token for the Turso database. |
