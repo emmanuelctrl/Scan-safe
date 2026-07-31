@@ -1,6 +1,7 @@
 // Server entry point.
 import config from './config/env.js';
 import { initDatabase } from './config/database.js';
+import { startDailyDigestScheduler } from './services/telegram.js';
 import app from './app.js';
 
 let server;
@@ -14,6 +15,9 @@ async function start() {
     console.log(`    Listening on http://localhost:${config.port}`);
     console.log(`    Allowed client origins: ${config.clientOrigins.join(', ')}\n`);
   });
+
+  // Telegram daily-digest scheduler (no-op unless TELEGRAM_BOT_TOKEN is set).
+  startDailyDigestScheduler();
 }
 
 start().catch((err) => {

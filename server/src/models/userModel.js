@@ -49,6 +49,22 @@ export const UserModel = {
     return bcrypt.compareSync(password, user.password_hash);
   },
 
+  /** Update a user's sale-notification preference (mode + threshold). */
+  setSaleNotifications(userId, mode, threshold = 0) {
+    return run(
+      `UPDATE users SET sale_notifications = ?, sale_notification_threshold = ? WHERE id = ?`,
+      [mode, Number(threshold) || 0, userId]
+    );
+  },
+
+  /** Linked owners in 'daily' mode, for the daily digest job. */
+  findDailyDigestOwners() {
+    return all(
+      `SELECT id, telegram_chat_id FROM users
+       WHERE sale_notifications = 'daily' AND telegram_chat_id IS NOT NULL`
+    );
+  },
+
   /** Link a user's account to their Telegram chat for sale notifications. */
   linkTelegram(userId, chatId) {
     return run(

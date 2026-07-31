@@ -14,9 +14,13 @@ export default function SettingsTab() {
   const [pinForm, setPinForm] = useState({ currentPin: '', newPin: '', confirmPin: '' });
   const [emailForm, setEmailForm] = useState({ email: '' });
   const [serverEmailReady, setServerEmailReady] = useState(false);
+  const [telegram, setTelegram] = useState(null); // { configured, linked, mode, threshold }
+  const [tgMode, setTgMode] = useState('instant');
+  const [tgThreshold, setTgThreshold] = useState(0);
   const [pinMsg, setPinMsg] = useState(null);
   const [emailMsg, setEmailMsg] = useState(null);
   const [testMsg, setTestMsg] = useState(null);
+  const [tgMsg, setTgMsg] = useState(null);
 
   useEffect(() => {
     api('/api/owner/settings', { owner: true })
@@ -24,12 +28,41 @@ export default function SettingsTab() {
         setSettings(d.settings);
         setServerEmailReady(Boolean(d.serverEmailReady));
         setEmailForm({ email: d.settings.notification_email });
+        if (d.telegram) {
+          setTelegram(d.telegram);
+          setTgMode(d.telegram.mode || 'instant');
+          setTgThreshold(d.telegram.threshold || 0);
+        }
         // Keep the UI theme in sync with the stored account preference.
         if (d.settings.theme && d.settings.theme !== theme) setTheme(d.settings.theme);
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function saveTelegram() {
+    setTgMsg(null);
+    try {
+      await api('/api/owner/settings/telegram', {
+        method: 'PUT',
+        owner: true,
+        body: { mode: tgMode, threshold: Number(tgThreshold) || 0 },
+      });
+      setTgMsg({ type: 'success', message: t('tgSaved') });
+    } catch (err) {
+      setTgMsg({ type: 'error', message: err.message });
+    }
+  }
+
+  async function testTelegram() {
+    setTgMsg({ type: 'info', message: t('tgTesting') });
+    try {
+      const d = await api('/api/owner/settings/telegram/test', { method: 'POST', owner: true });
+      setTgMsg({ type: 'success', message: d.message });
+    } catch (err) {
+      setTgMsg({ type: 'error', message: err.message });
+    }
+  }
 
   async function changePin(e) {
     e.preventDefault();
@@ -159,6 +192,67 @@ export default function SettingsTab() {
           </div>
         )}
       </section>
+
+      {/* Telegram sale notifications */}
+      {telegram?.configured && (
+        <section className="card">
+          <div className="card__head">
+            <h3>📲 {t('tgTitle')}</h3>
+            <span className={`badge ${telegram.linked ? 'badge--success' : 'badge--warning'}`}>
+              {telegram.linked ? t('tgLinked') : t('tgNotLinked')}
+            </span>
+          </div>
+          <p className="muted">
+            {telegram.linked ? t('tgLinkedHelp') : t('tgNotLinkedHelp')}
+          </p>
+
+          <div className="theme-toggle" role="radiogroup">
+            {['instant', 'threshold', 'daily'].map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={tgMode === m}
+                className={`theme-option ${tgMode === m ? 'is-active' : ''}`}
+                onClick={() => setTgMode(m)}
+              >
+                {t(`tgMode_${m}`)}
+              </button>
+            ))}
+          </div>
+
+          {tgMode === 'threshold' && (
+            <label className="field" style={{ marginTop: '0.85rem' }}>
+              <span>{t('tgThresholdLabel')}</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={tgThreshold}
+                onChange={(e) => setTgThreshold(e.target.value)}
+                placeholder="0"
+              />
+            </label>
+          )}
+
+          <p className="muted" style={{ marginTop: '0.75rem', fontSize: '0.82rem' }}>
+            {t('tgModeHelp')}
+          </p>
+
+          {tgMsg && <p className={`status status--${tgMsg.type}`}>{tgMsg.message}</p>}
+
+          <div className="row-actions" style={{ marginTop: '0.75rem' }}>
+            <button type="button" className="btn btn--primary" onClick={saveTelegram}>
+              {t('save')}
+            </button>
+            {telegram.linked && (
+              <button type="button" className="btn btn--secondary" onClick={testTelegram}>
+                {t('tgTest')}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Theme */}
       <section className="card">
