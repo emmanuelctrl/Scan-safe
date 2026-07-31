@@ -9,16 +9,19 @@
 // Every handler operates strictly on req.user.id's own data, so each account
 // has a fully separate inventory, dashboard and settings.
 import { Router } from 'express';
+import config from '../config/env.js';
 import { ItemModel } from '../models/itemModel.js';
 import { ScanModel } from '../models/scanModel.js';
 import { StockModel } from '../models/stockModel.js';
 import { SettingsModel } from '../models/settingsModel.js';
+import { UserModel } from '../models/userModel.js';
 import { parseInventoryFile } from '../services/importService.js';
 import {
   sendTestEmail,
   describeSmtpError,
   serverEmailReady,
 } from '../services/emailService.js';
+import { sendTelegram } from '../services/telegram.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireOwner, issueOwnerToken } from '../middleware/ownerPin.js';
 import { uploadSpreadsheet } from '../middleware/upload.js';
@@ -30,6 +33,7 @@ import {
   notificationEmailSchema,
   themeSchema,
   stockAdjustSchema,
+  telegramPrefsSchema,
 } from '../validators/schemas.js';
 import { validate } from '../utils/validate.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -222,9 +226,18 @@ router.delete(
 router.get(
   '/settings',
   asyncHandler(async (req, res) => {
+    const user = await UserModel.findById(req.user.id);
     res.json({
       settings: SettingsModel.toPublic(await SettingsModel.get(req.user.id)),
       serverEmailReady: serverEmailReady(),
+      telegram: {
+        // Whether the server has a bot token at all.
+        configured: Boolean(config.telegramBotToken),
+        // Whether this owner's account is linked to a Telegram chat.
+        linked: Boolean(user?.telegram_chat_id),
+        mode: user?.sale_notifications || 'instant',
+        threshold: Number(user?.sale_notification_threshold || 0),
+      },
     });
   })
 );
@@ -288,6 +301,49 @@ router.post(
     res.json({
       message: `Test email sent to ${settings.notification_email}. Check your inbox (and spam folder).`,
     });
+  })
+);
+
+// PUT /api/owner/settings/telegram — choose when Telegram sale alerts are sent:
+// instant (every sale), threshold (>= an amount), or daily (a summary).
+router.put(
+  '/settings/telegram',
+  asyncHandler(async (req, res) => {
+    const { mode, threshold } = validate(telegramPrefsSchema, req.body);
+    await UserModel.setSaleNotifications(req.user.id, mode, threshold);
+    res.json({ telegram: { mode, threshold } });
+  })
+);
+
+// POST /api/owner/settings/telegram/test — send a test Telegram message to the
+// owner's linked chat and report the exact reason if it doesn't arrive.
+router.post(
+  '/settings/telegram/test',
+  asyncHandler(async (req, res) => {
+    if (!config.telegramBotToken) {
+      throw ApiError.badRequest('Telegram is not configured on the server (TELEGRAM_BOT_TOKEN).');
+    }
+    const user = await UserModel.findById(req.user.id);
+    if (!user?.telegram_chat_id) {
+      throw ApiError.badRequest('Not linked yet — open this app inside Telegram while signed in, then try again.');
+    }
+
+    const result = await sendTelegram(
+      user.telegram_chat_id,
+      '✅ <b>Test notification</b>\nYour Inventory Tracker sales alerts are working.'
+    );
+
+    if (result.ok) {
+      return res.json({ message: 'Test sent — check Telegram.' });
+    }
+    const reasons = {
+      not_started: 'Open your bot in Telegram and press Start, then try again.',
+      blocked: "The bot is blocked or was removed. Unblock it in Telegram, then re-open this app.",
+      no_token: 'Telegram is not configured on the server (TELEGRAM_BOT_TOKEN).',
+      not_linked: 'Not linked yet — open this app inside Telegram while signed in.',
+      network: "Couldn't reach Telegram. Try again in a moment.",
+    };
+    throw ApiError.badRequest(reasons[result.reason] || result.description || 'Could not send the test message.');
   })
 );
 

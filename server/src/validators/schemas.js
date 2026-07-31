@@ -54,6 +54,11 @@ export const changePinSchema = z.object({
 
 export const notificationEmailSchema = z.object({ email });
 
+export const telegramPrefsSchema = z.object({
+  mode: z.enum(['instant', 'threshold', 'daily']),
+  threshold: z.coerce.number().min(0, 'Threshold cannot be negative.').default(0),
+});
+
 export const themeSchema = z.object({ theme: z.enum(['light', 'dark']) });
 
 export const adminLoginSchema = z.object({

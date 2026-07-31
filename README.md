@@ -278,6 +278,26 @@ loaded in `client/index.html`) and adapts:
 
 Outside Telegram none of this activates — the site behaves exactly as before.
 
+### Sale notifications on Telegram
+
+Set **`TELEGRAM_BOT_TOKEN`** (from @BotFather) and completing a sale messages
+the store owner on Telegram within seconds.
+
+- **Linking is automatic:** open the app inside Telegram while signed in and the
+  account is bound to that Telegram chat — no setup screen.
+- **Press Start once:** Telegram only lets a bot message a user who has started
+  it. After linking, open the bot chat and tap **Start** (or send it any
+  message). Until then the first send returns 403 "can't initiate conversation";
+  the account stays linked, so once you press Start the next sale gets through.
+- **When to be notified** — Owner Portal → Settings → **Telegram sale alerts**:
+  *Every sale* (instant), *Over an amount* (only sales ≥ a threshold), or
+  *Daily summary* (one evening recap, ~21:00 Africa/Addis_Ababa).
+- **Send test message** in that card verifies the whole path and reports the
+  exact reason if it fails (not configured / not linked / press Start / blocked).
+
+> The daily summary runs in-process, so on a host that sleeps when idle (e.g.
+> Render's free plan) it only fires while the service is awake.
+
 **To register it as a Mini App:**
 
 1. Deploy the frontend somewhere with **HTTPS** (required by Telegram).

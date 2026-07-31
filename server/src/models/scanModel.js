@@ -36,6 +36,23 @@ export const ScanModel = {
     );
   },
 
+  /**
+   * Aggregate totals for the current Africa/Addis_Ababa day (UTC+3, no DST),
+   * for the Telegram daily digest.
+   */
+  digestForToday(userId) {
+    return get(
+      `SELECT COUNT(*)                                          AS count,
+              COALESCE(SUM(quantity), 0)                        AS units,
+              COALESCE(SUM(unit_price * quantity), 0)           AS revenue,
+              COALESCE(SUM((unit_price - unit_cost) * quantity), 0) AS profit
+       FROM scans
+       WHERE user_id = ? AND action = 'checkout'
+         AND date(created_at, '+3 hours') = date('now', '+3 hours')`,
+      [userId]
+    );
+  },
+
   /** Sales made today for this store (checkouts only), with totals. */
   async salesToday(userId) {
     const rows = await all(

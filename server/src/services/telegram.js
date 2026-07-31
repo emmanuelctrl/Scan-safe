@@ -6,6 +6,7 @@
 // never logged or returned to any client.
 import config from '../config/env.js';
 import { UserModel } from '../models/userModel.js';
+import { ScanModel } from '../models/scanModel.js';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
@@ -20,16 +21,26 @@ function escapeHtml(value) {
 const money = (n) => `${Number(n || 0).toFixed(2)} ETB`;
 
 /**
- * Send a single HTML message to a Telegram chat. Never throws. On HTTP 403
- * (user blocked the bot / chat gone) the account is unlinked so we stop trying.
+ * Send a single HTML message to a Telegram chat. Never throws; returns a
+ * result object describing the outcome so callers (e.g. the "send test"
+ * button) can explain failures.
+ *
+ * On HTTP 403 we inspect the reason: a genuinely blocked/deactivated user is
+ * unlinked so we stop trying, but "bot can't initiate conversation" (the owner
+ * simply hasn't pressed Start on the bot yet) keeps the link intact — once they
+ * press Start, the next sale reaches them with no re-linking.
+ *
+ * @returns {Promise<{ ok: boolean, reason?: string, status?: number, description?: string }>}
  */
 export async function sendTelegram(chatId, text) {
   const token = config.telegramBotToken;
-  if (!token || !chatId) return;
+  if (!token) return { ok: false, reason: 'no_token' };
+  if (!chatId) return { ok: false, reason: 'not_linked' };
 
+  let res;
   try {
     // NOTE: the URL contains the bot token — never log it.
-    const res = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
+    res = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -39,18 +50,33 @@ export async function sendTelegram(chatId, text) {
         disable_web_page_preview: true,
       }),
     });
-
-    if (!res.ok) {
-      if (res.status === 403) {
-        await UserModel.unlinkTelegramByChatId(chatId);
-        return;
-      }
-      const body = await res.text().catch(() => '');
-      console.error(`[telegram] sendMessage failed (HTTP ${res.status}): ${body}`);
-    }
   } catch (err) {
     console.error('[telegram] sendMessage error:', err.message);
+    return { ok: false, reason: 'network', description: err.message };
   }
+
+  if (res.ok) return { ok: true };
+
+  let description = '';
+  try {
+    const data = await res.json();
+    description = data?.description || '';
+  } catch {
+    description = await res.text().catch(() => '');
+  }
+
+  if (res.status === 403) {
+    if (/can'?t initiate conversation|bot was not started/i.test(description)) {
+      // Recoverable: owner just needs to press Start on the bot. Keep the link.
+      return { ok: false, reason: 'not_started', status: 403, description };
+    }
+    // blocked / deactivated / kicked → stop messaging this chat.
+    await UserModel.unlinkTelegramByChatId(chatId);
+    return { ok: false, reason: 'blocked', status: 403, description };
+  }
+
+  console.error(`[telegram] sendMessage failed (HTTP ${res.status}): ${description}`);
+  return { ok: false, reason: 'error', status: res.status, description };
 }
 
 /**
@@ -109,4 +135,58 @@ export async function notifySale(sale) {
   await Promise.allSettled(
     recipients.map((o) => sendTelegram(o.telegram_chat_id, text))
   );
+}
+
+/**
+ * Send each 'daily'-mode owner a summary of their store's sales for the current
+ * Addis Ababa day. Best-effort; skips stores with no sales. Never throws.
+ */
+export async function sendDailyDigests() {
+  if (!config.telegramBotToken) return;
+
+  const owners = await UserModel.findDailyDigestOwners();
+  for (const owner of owners) {
+    const totals = await ScanModel.digestForToday(owner.id);
+    if (!totals || totals.count === 0) continue;
+
+    const text = [
+      '📊 <b>Daily sales summary</b>',
+      `<b>Sales:</b> ${totals.count} · ${totals.units} unit(s)`,
+      `<b>Revenue:</b> ${money(totals.revenue)}`,
+      `<b>Profit:</b> ${money(totals.profit)}`,
+    ].join('\n');
+    // eslint-disable-next-line no-await-in-loop
+    await sendTelegram(owner.telegram_chat_id, text);
+  }
+}
+
+/**
+ * Schedule sendDailyDigests() to run once a day at ~21:00 Africa/Addis_Ababa
+ * (18:00 UTC — Ethiopia has no DST). In-process and best-effort: on a host that
+ * sleeps when idle (e.g. Render free) it only fires while the service is awake.
+ */
+export function startDailyDigestScheduler() {
+  if (!config.telegramBotToken) return;
+
+  const msUntilNextRun = () => {
+    const now = new Date();
+    const next = new Date(Date.UTC(
+      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 18, 0, 0
+    ));
+    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+    return next.getTime() - now.getTime();
+  };
+
+  const schedule = () => {
+    setTimeout(async () => {
+      try {
+        await sendDailyDigests();
+      } catch (err) {
+        console.error('[telegram] daily digest failed:', err.message);
+      }
+      schedule();
+    }, msUntilNextRun()).unref?.();
+  };
+
+  schedule();
 }
