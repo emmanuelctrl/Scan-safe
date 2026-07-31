@@ -97,8 +97,9 @@ const SCHEMA_SQL = `
     sale_notification_threshold REAL NOT NULL DEFAULT 0,
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
-
-  CREATE INDEX IF NOT EXISTS idx_users_telegram_chat_id ON users (telegram_chat_id);
+  -- NB: the index on telegram_chat_id is created in migrate() (after the
+  -- ALTER TABLE), so it isn't referenced here before an existing users table
+  -- has the column.
 
   CREATE TABLE IF NOT EXISTS settings (
     user_id            INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
