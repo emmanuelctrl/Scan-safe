@@ -315,6 +315,18 @@ router.put(
   })
 );
 
+// DELETE /api/owner/settings/telegram/link — reset the Telegram binding so a
+// new device/chat can be linked. Only the account owner (PIN-gated) can do
+// this; the next time the app is opened inside Telegram it re-links to whoever
+// opens it first.
+router.delete(
+  '/settings/telegram/link',
+  asyncHandler(async (req, res) => {
+    await UserModel.unlinkTelegram(req.user.id);
+    res.json({ telegram: { linked: false } });
+  })
+);
+
 // POST /api/owner/settings/telegram/test — send a test Telegram message to the
 // owner's linked chat and report the exact reason if it doesn't arrive.
 router.post(
