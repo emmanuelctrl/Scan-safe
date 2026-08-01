@@ -54,6 +54,18 @@ export default function SettingsTab() {
     }
   }
 
+  async function unlinkTelegram() {
+    if (!window.confirm(t('tgUnlinkConfirm'))) return;
+    setTgMsg(null);
+    try {
+      const d = await api('/api/owner/settings/telegram/link', { method: 'DELETE', owner: true });
+      setTelegram((prev) => ({ ...(prev || {}), linked: Boolean(d?.telegram?.linked) }));
+      setTgMsg({ type: 'success', message: t('tgUnlinked') });
+    } catch (err) {
+      setTgMsg({ type: 'error', message: err.message });
+    }
+  }
+
   async function testTelegram() {
     setTgMsg({ type: 'info', message: t('tgTesting') });
     try {
@@ -248,6 +260,11 @@ export default function SettingsTab() {
             {telegram.linked && (
               <button type="button" className="btn btn--secondary" onClick={testTelegram}>
                 {t('tgTest')}
+              </button>
+            )}
+            {telegram.linked && (
+              <button type="button" className="btn btn--ghost" onClick={unlinkTelegram}>
+                {t('tgUnlink')}
               </button>
             )}
           </div>

@@ -65,12 +65,30 @@ export const UserModel = {
     );
   },
 
-  /** Link a user's account to their Telegram chat for sale notifications. */
-  linkTelegram(userId, chatId) {
-    return run(
-      `UPDATE users SET telegram_chat_id = ?, telegram_linked_at = datetime('now') WHERE id = ?`,
-      [chatId, userId]
+  /**
+   * Link a user's account to their Telegram chat for sale notifications.
+   *
+   * The link is locked to the FIRST chat that binds to the account (the owner /
+   * account creator): once set, a different Telegram user opening the Mini App
+   * under the same login can NOT take over the notifications. Re-linking the
+   * same chat is allowed (it just refreshes the timestamp). The owner can reset
+   * the binding from Settings (unlinkTelegram) to move it to a new device.
+   *
+   * @returns {Promise<boolean>} true if this chat is now linked; false if the
+   *   account is already locked to a different chat.
+   */
+  async linkTelegram(userId, chatId) {
+    const result = await run(
+      `UPDATE users SET telegram_chat_id = ?, telegram_linked_at = datetime('now')
+       WHERE id = ? AND (telegram_chat_id IS NULL OR telegram_chat_id = ?)`,
+      [chatId, userId, chatId]
     );
+    return result.rowsAffected > 0;
+  },
+
+  /** Clear an account's Telegram link so a new chat may be bound (owner reset). */
+  unlinkTelegram(userId) {
+    return run('UPDATE users SET telegram_chat_id = NULL WHERE id = ?', [userId]);
   },
 
   /**

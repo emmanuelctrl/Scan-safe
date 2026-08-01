@@ -26,14 +26,20 @@ router.post(
       throw ApiError.unauthorized('Invalid Telegram init data.');
     }
 
-    await UserModel.linkTelegram(req.user.id, String(tgUser.id));
+    // Locked to the first chat that links (the account creator/owner). If the
+    // account is already bound to a different Telegram user, we do NOT take it
+    // over — sale alerts stay with the original owner.
+    const linked = await UserModel.linkTelegram(req.user.id, String(tgUser.id));
 
     const linkedAs =
       [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') ||
       tgUser.username ||
       String(tgUser.id);
 
-    res.json({ success: true, linkedAs });
+    // `success` reflects whether THIS chat is the linked recipient. When the
+    // account is already locked to someone else, report success:false without
+    // an error (the caller links silently and simply leaves the owner in place).
+    res.json({ success: linked, locked: !linked, linkedAs: linked ? linkedAs : null });
   })
 );
 
